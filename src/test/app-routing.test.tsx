@@ -1,39 +1,69 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { routeTree } from "@/routeTree.gen";
 
-function renderAt(path: string) {
+let activeRoot: ReturnType<typeof createRoot> | undefined;
+
+// The root route's shellComponent renders a full <html> document, so testing-library's
+// container-based render() cannot see it: React 19 hoists <html> out of the container
+// and leaves it empty. Render into a detached document instead and query the markup.
+async function renderAt(path: string) {
   const queryClient = new QueryClient();
   const router = createRouter({
     routeTree,
     context: { queryClient },
     history: createMemoryHistory({ initialEntries: [path] }),
   });
-  return render(<RouterProvider router={router} />);
+  await router.load();
+
+  const doc = document.implementation.createHTMLDocument("test");
+  activeRoot = createRoot(doc);
+  await act(async () => {
+    activeRoot?.render(<RouterProvider router={router} />);
+  });
+
+  return doc;
 }
 
-afterEach(() => {
-  cleanup();
+afterEach(async () => {
+  await act(async () => {
+    activeRoot?.unmount();
+  });
+  activeRoot = undefined;
   vi.restoreAllMocks();
 });
 
-// Assert only that the router mounts and paints, never page content:
-// routes are rewritten as the app is built and this must keep passing.
+// Assert each route paints its own page heading, so a route that silently fails to
+// render is caught instead of passing on an empty container.
 describe("App routing", () => {
   it("renders the index route", async () => {
-    const { container } = renderAt("/");
+    const doc = await renderAt("/");
 
-    await waitFor(() => expect(container.firstChild).not.toBeNull());
+    expect(doc.title).toBe("This Week — Tidewell");
+    expect(doc.body.textContent).toContain("Safe to spend this week");
+    expect(doc.body.textContent).toContain("Income logged");
+  });
+
+  it("renders the buffer route", async () => {
+    const doc = await renderAt("/buffer");
+
+    expect(doc.title).toBe("Buffer & Runway — Tidewell");
+    expect(doc.body.textContent).toContain("Buffer balance");
+    expect(doc.body.textContent).toContain("Runway");
   });
 
   it("renders the not-found route", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const doc = await renderAt("/this-route-does-not-exist");
 
-    const { container } = renderAt("/this-route-does-not-exist");
-
-    await waitFor(() => expect(container.firstChild).not.toBeNull());
+    // No route matched, so the root route's default title stays in place.
+    expect(doc.title).toBe("Tidewell — Weekly budget planner");
+    expect(doc.body.textContent).toContain("404");
+    expect(doc.body.textContent).toContain("Page not found");
+    expect(doc.querySelector("h1")?.textContent).toBe("404");
   });
 });
