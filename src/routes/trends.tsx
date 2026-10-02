@@ -8,7 +8,10 @@ export const Route = createFileRoute("/trends")({
   head: () => ({
     meta: [
       { title: "Trends — Tidewell" },
-      { name: "description", content: "Twelve weeks of income versus spending and a monthly rollup." },
+      {
+        name: "description",
+        content: "Twelve weeks of income versus spending and a monthly rollup.",
+      },
       { property: "og:title", content: "Trends — Tidewell" },
       { property: "og:description", content: "Income vs spending over time." },
     ],
@@ -20,7 +23,9 @@ function TrendsPage() {
   return (
     <div>
       <PageHeader title="Trends" subtitle="Income vs spending over the last 12 weeks." />
-      <Panel title="Income vs spending"><IncomeSpendChart /></Panel>
+      <Panel title="Income vs spending">
+        <IncomeSpendChart />
+      </Panel>
       <Panel title="Monthly rollup" className="mt-6">
         <div className="-mx-2 overflow-x-auto">
           <table className="w-full min-w-[440px] text-[13px]">
@@ -36,9 +41,15 @@ function TrendsPage() {
               {monthlyRollup.map((m) => (
                 <tr key={m.month} className="border-t">
                   <td className="px-2 py-3">{m.month}</td>
-                  <td className="px-2 py-3 text-right">{formatMoney(m.income, settings.currency)}</td>
-                  <td className="px-2 py-3 text-right">{formatMoney(m.spending, settings.currency)}</td>
-                  <td className="px-2 py-3 text-right text-safe">{formatMoney(m.saved, settings.currency, { sign: true })}</td>
+                  <td className="px-2 py-3 text-right">
+                    {formatMoney(m.income, settings.currency)}
+                  </td>
+                  <td className="px-2 py-3 text-right">
+                    {formatMoney(m.spending, settings.currency)}
+                  </td>
+                  <td className="px-2 py-3 text-right text-safe">
+                    {formatMoney(m.saved, settings.currency, { sign: true })}
+                  </td>
                 </tr>
               ))}
             </tbody>

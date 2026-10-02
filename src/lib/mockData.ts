@@ -1,4 +1,12 @@
-import type { Category, Goal, IncomeEntry, ISODate, RecurringBill, Settings, Transaction } from "./types";
+import type {
+  Category,
+  Goal,
+  IncomeEntry,
+  ISODate,
+  RecurringBill,
+  Settings,
+  Transaction,
+} from "./types";
 
 export const settings: Settings = {
   currency: "USD",
@@ -15,42 +23,137 @@ export const currentWeek: { start: ISODate; end: ISODate; number: number } = {
 
 export const categories: Category[] = [
   { id: "rent", name: "Rent", type: "essential", budgetAmount: 1450, budgetPeriod: "monthly" },
-  { id: "groceries", name: "Groceries", type: "essential", budgetAmount: 110, budgetPeriod: "weekly" },
-  { id: "transport", name: "Transport", type: "essential", budgetAmount: 45, budgetPeriod: "weekly" },
-  { id: "utilities", name: "Utilities", type: "essential", budgetAmount: 160, budgetPeriod: "monthly" },
-  { id: "emergency", name: "Emergency fund", type: "savings", budgetAmount: 60, budgetPeriod: "weekly" },
-  { id: "retirement", name: "Retirement", type: "savings", budgetAmount: 300, budgetPeriod: "monthly" },
+  {
+    id: "groceries",
+    name: "Groceries",
+    type: "essential",
+    budgetAmount: 110,
+    budgetPeriod: "weekly",
+  },
+  {
+    id: "transport",
+    name: "Transport",
+    type: "essential",
+    budgetAmount: 45,
+    budgetPeriod: "weekly",
+  },
+  {
+    id: "utilities",
+    name: "Utilities",
+    type: "essential",
+    budgetAmount: 160,
+    budgetPeriod: "monthly",
+  },
+  {
+    id: "emergency",
+    name: "Emergency fund",
+    type: "savings",
+    budgetAmount: 60,
+    budgetPeriod: "weekly",
+  },
+  {
+    id: "retirement",
+    name: "Retirement",
+    type: "savings",
+    budgetAmount: 300,
+    budgetPeriod: "monthly",
+  },
   { id: "dining", name: "Dining out", type: "flexible", budgetAmount: 60, budgetPeriod: "weekly" },
   { id: "coffee", name: "Coffee", type: "flexible", budgetAmount: 20, budgetPeriod: "weekly" },
   { id: "fun", name: "Hobbies & fun", type: "flexible", budgetAmount: 50, budgetPeriod: "weekly" },
 ];
 
 export const incomeEntries: IncomeEntry[] = [
-  { id: "i1", date: "2026-09-28", amount: 640, source: "Freelance", note: "Freelance payout · Nova Design" },
+  {
+    id: "i1",
+    date: "2026-09-28",
+    amount: 640,
+    source: "Freelance",
+    note: "Freelance payout · Nova Design",
+  },
   { id: "i2", date: "2026-09-30", amount: 185, source: "Delivery", note: "Delivery shift tips" },
 ];
 
 export const transactions: Transaction[] = [
   { id: "t2", date: "2026-09-28", amount: 32, categoryId: "transport", note: "Metro card top-up" },
-  { id: "t3", date: "2026-09-29", amount: 52.4, categoryId: "groceries", note: "Greenfield Market" },
+  {
+    id: "t3",
+    date: "2026-09-29",
+    amount: 52.4,
+    categoryId: "groceries",
+    note: "Greenfield Market",
+  },
   { id: "t5", date: "2026-09-30", amount: 41.5, categoryId: "dining", note: "Thai with Sam" },
-  { id: "t6", date: "2026-10-01", amount: 17.5, categoryId: "coffee", note: "Corner cafe, flat white ×3" },
+  {
+    id: "t6",
+    date: "2026-10-01",
+    amount: 17.5,
+    categoryId: "coffee",
+    note: "Corner cafe, flat white ×3",
+  },
   { id: "t7", date: "2026-10-01", amount: 22.5, categoryId: "groceries", note: "Farmers market" },
-  { id: "t8", date: "2026-10-02", amount: 60, categoryId: "emergency", note: "Emergency fund transfer" },
+  {
+    id: "t8",
+    date: "2026-10-02",
+    amount: 60,
+    categoryId: "emergency",
+    note: "Emergency fund transfer",
+  },
   { id: "t9", date: "2026-10-02", amount: 12, categoryId: "fun", note: "Paint & brushes" },
 ];
 
 export const bills: RecurringBill[] = [
-  { id: "b1", name: "Rent · Riverside flat", amount: 1450, period: "monthly", categoryId: "rent", dueDay: "1st" },
-  { id: "b2", name: "Electricity", amount: 85, period: "monthly", categoryId: "utilities", dueDay: "12th" },
-  { id: "b3", name: "Internet", amount: 55, period: "monthly", categoryId: "utilities", dueDay: "18th" },
-  { id: "b4", name: "Phone plan", amount: 30, period: "monthly", categoryId: "utilities", dueDay: "22nd" },
+  {
+    id: "b1",
+    name: "Rent · Riverside flat",
+    amount: 1450,
+    period: "monthly",
+    categoryId: "rent",
+    dueDay: "1st",
+  },
+  {
+    id: "b2",
+    name: "Electricity",
+    amount: 85,
+    period: "monthly",
+    categoryId: "utilities",
+    dueDay: "12th",
+  },
+  {
+    id: "b3",
+    name: "Internet",
+    amount: 55,
+    period: "monthly",
+    categoryId: "utilities",
+    dueDay: "18th",
+  },
+  {
+    id: "b4",
+    name: "Phone plan",
+    amount: 30,
+    period: "monthly",
+    categoryId: "utilities",
+    dueDay: "22nd",
+  },
   { id: "b5", name: "Gym", amount: 12, period: "weekly", categoryId: "fun", dueDay: "Monday" },
-  { id: "b6", name: "Renter's insurance", amount: 180, period: "yearly", categoryId: "utilities", dueDay: "Mar 3" },
+  {
+    id: "b6",
+    name: "Renter's insurance",
+    amount: 180,
+    period: "yearly",
+    categoryId: "utilities",
+    dueDay: "Mar 3",
+  },
 ];
 
 export const goals: Goal[] = [
-  { id: "g1", name: "Lisbon trip", targetAmount: 1800, savedAmount: 1120, targetDate: "2027-04-01" },
+  {
+    id: "g1",
+    name: "Lisbon trip",
+    targetAmount: 1800,
+    savedAmount: 1120,
+    targetDate: "2027-04-01",
+  },
   { id: "g2", name: "New laptop", targetAmount: 1400, savedAmount: 380, targetDate: "2027-06-15" },
   { id: "g3", name: "Bike repair", targetAmount: 260, savedAmount: 215, targetDate: "2026-11-01" },
 ];

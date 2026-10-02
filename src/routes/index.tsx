@@ -8,7 +8,10 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "This Week — Tidewell" },
-      { name: "description", content: "Your safe-to-spend number for this week, income logged and where it goes." },
+      {
+        name: "description",
+        content: "Your safe-to-spend number for this week, income logged and where it goes.",
+      },
       { property: "og:title", content: "This Week — Tidewell" },
       { property: "og:description", content: "Your safe-to-spend number for this week." },
     ],

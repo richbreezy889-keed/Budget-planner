@@ -4,7 +4,11 @@ export interface FormatMoneyOptions {
 }
 
 /** The single place money is turned into display text. */
-export function formatMoney(amount: number, currency: string, opts: FormatMoneyOptions = {}): string {
+export function formatMoney(
+  amount: number,
+  currency: string,
+  opts: FormatMoneyOptions = {},
+): string {
   const digits = opts.cents ? 2 : 0;
   const s = new Intl.NumberFormat("en-US", {
     style: "currency",

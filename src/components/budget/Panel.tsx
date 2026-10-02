@@ -1,7 +1,17 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-export function Panel({ title, action, className, children }: { title?: string; action?: ReactNode; className?: string; children: ReactNode }) {
+export function Panel({
+  title,
+  action,
+  className,
+  children,
+}: {
+  title?: string;
+  action?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <section className={cn("glass rounded-2xl p-5 sm:p-6", className)}>
       {(title || action) && (
@@ -34,11 +44,20 @@ export function Stat({ label, value, hint }: { label: string; value: string; hin
   );
 }
 
-export function Progress({ value, tone = "primary" }: { value: number; tone?: "primary" | "warn" | "danger" }) {
+export function Progress({
+  value,
+  tone = "primary",
+}: {
+  value: number;
+  tone?: "primary" | "warn" | "danger";
+}) {
   const bar = { primary: "bg-primary", warn: "bg-warn", danger: "bg-danger" }[tone];
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-      <div className={cn("h-full rounded-full transition-all", bar)} style={{ width: `${Math.min(100, value * 100)}%` }} />
+      <div
+        className={cn("h-full rounded-full transition-all", bar)}
+        style={{ width: `${Math.min(100, value * 100)}%` }}
+      />
     </div>
   );
 }
