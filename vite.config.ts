@@ -12,4 +12,8 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Pin the deploy target to Vercel. Without this the wrapper falls back to its
+  // defaultPreset, "cloudflare-module", and a Vercel build would emit a Cloudflare
+  // Workers bundle. Nitro does not auto-detect Vercel from the environment.
+  nitro: { preset: "vercel" },
 });
