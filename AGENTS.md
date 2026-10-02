@@ -31,8 +31,10 @@
   by TanStack Start, so any storage access must run in the browser only — inside
   `useEffect`, an event handler, or guarded by a `typeof window !== "undefined"`
   check. Never read or write browser storage at module scope or during render.
-- **All money math lives in pure functions in `src/lib/calc`, with Vitest tests.**
-  Keep every calculation of amounts, balances, budgets, safe-to-spend, buffers and
-  trends in pure functions in `src/lib/calc` — no React, no DOM, no storage, no
-  side effects. Cover them with Vitest tests. Components and routes only format and
-  display those results.
+- **All money math lives in pure functions in `src/lib/calc.ts`, with Vitest tests
+  in `src/lib/calc.test.ts`.** Keep every calculation of amounts, balances, budgets,
+  safe-to-spend, buffers and trends in pure functions in `src/lib/calc.ts` — no
+  React, no DOM, no storage, no side effects. Cover them with Vitest tests in the
+  matching `src/lib/calc.test.ts`. Components and routes only format and display
+  those results. Split into a `src/lib/calc/` folder only if it actually outgrows a
+  single file.
