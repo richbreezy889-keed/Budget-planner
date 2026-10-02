@@ -23,7 +23,8 @@
 - **Run typecheck, build and tests after every task, and show the output.**
   Run `bun run typecheck`, `bun run build` and `bun run test` after each task.
   Paste the real output into the response — never claim a pass you did not see.
-  If something fails, say so plainly and explain why.
+  If something fails, say so plainly and explain why. All four checks (typecheck,
+  lint, build, test) must be green before a task counts as done.
 - **End each task with a list of files changed.** List every file created, edited
   or deleted for that task.
 - **Browser storage is client-side only.** `localStorage` / `sessionStorage` /
