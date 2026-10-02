@@ -35,13 +35,13 @@ function SettingsPage() {
           <select className={field} defaultValue={settings.currency}><option>USD</option><option>EUR</option><option>GBP</option><option>TZS</option></select>
         </Row>
         <Row label="Week starts on" hint="Defines your weekly period">
-          <select className={field} defaultValue={settings.weekStart}><option>Monday</option><option>Sunday</option><option>Saturday</option></select>
+          <select className={field} defaultValue={settings.weekStartDay}><option>Monday</option><option>Sunday</option><option>Saturday</option></select>
         </Row>
         <Row label="Baseline weekly income" hint="A conservative, lean-week figure">
           <input className={field} defaultValue={settings.baselineWeeklyIncome} inputMode="decimal" />
         </Row>
         <Row label="Opening buffer balance" hint="Starting amount in your buffer">
-          <input className={field} defaultValue={settings.openingBuffer} inputMode="decimal" />
+          <input className={field} defaultValue={settings.openingBufferBalance} inputMode="decimal" />
         </Row>
       </Panel>
       <Panel title="Data" className="mt-6">

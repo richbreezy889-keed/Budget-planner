@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Panel } from "@/components/budget/Panel";
 import { IncomeSpendChart } from "@/components/budget/charts";
-import { monthlyRollup } from "@/lib/mockData";
-import { formatMoney } from "@/lib/calc";
+import { monthlyRollup, settings } from "@/lib/mockData";
+import { formatMoney } from "@/lib/format";
 
 export const Route = createFileRoute("/trends")({
   head: () => ({
@@ -36,9 +36,9 @@ function TrendsPage() {
               {monthlyRollup.map((m) => (
                 <tr key={m.month} className="border-t">
                   <td className="px-2 py-3">{m.month}</td>
-                  <td className="px-2 py-3 text-right">{formatMoney(m.income)}</td>
-                  <td className="px-2 py-3 text-right">{formatMoney(m.spending)}</td>
-                  <td className="px-2 py-3 text-right text-safe">{formatMoney(m.saved, { sign: true })}</td>
+                  <td className="px-2 py-3 text-right">{formatMoney(m.income, settings.currency)}</td>
+                  <td className="px-2 py-3 text-right">{formatMoney(m.spending, settings.currency)}</td>
+                  <td className="px-2 py-3 text-right text-safe">{formatMoney(m.saved, settings.currency, { sign: true })}</td>
                 </tr>
               ))}
             </tbody>
