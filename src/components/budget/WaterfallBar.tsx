@@ -1,10 +1,12 @@
-import { formatMoney, getWaterfall } from "@/lib/calc";
+import { formatMoney } from "@/lib/format";
+import { weeklyWaterfall, incomeForWeek } from "@/lib/calc";
+import { bills, categories, currentWeek, goals, incomeEntries, settings } from "@/lib/mockData";
 import { Panel } from "./Panel";
 
 const shades = ["bg-primary", "bg-primary/70", "bg-primary/50", "bg-primary/30", "bg-sky/60"];
 
 export function WaterfallBar() {
-  const parts = getWaterfall();
+  const parts = weeklyWaterfall(incomeForWeek(incomeEntries, currentWeek.start), categories, bills, goals);
   const total = parts.reduce((a, p) => a + p.amount, 0);
   return (
     <Panel title="Where this week's income goes">
@@ -17,7 +19,7 @@ export function WaterfallBar() {
         {parts.map((p, i) => (
           <div key={p.key}>
             <div className={`mb-1 h-2 w-2 rounded-full ${shades[i]}`} />
-            {p.key}<br /><span className="text-muted-foreground">{formatMoney(p.amount)}</span>
+            {p.key}<br /><span className="text-muted-foreground">{formatMoney(p.amount, settings.currency)}</span>
           </div>
         ))}
       </div>

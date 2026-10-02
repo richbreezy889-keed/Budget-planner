@@ -1,11 +1,11 @@
 import { format, parseISO } from "date-fns";
 import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, Bar, BarChart } from "recharts";
-import { incomeHistory } from "@/lib/mockData";
-import { getBaseline } from "@/lib/calc";
+import { weeklyHistory, settings } from "@/lib/mockData";
+
 
 const axis = { stroke: "var(--muted-foreground)", fontSize: 11, tickLine: false, axisLine: false } as const;
 const tip = { contentStyle: { background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }, labelStyle: { color: "var(--muted-foreground)" } };
-const data = incomeHistory.map((w) => ({ ...w, label: format(parseISO(w.weekStart), "d MMM") }));
+const data = weeklyHistory.map((w) => ({ ...w, label: format(parseISO(w.weekStart), "d MMM") }));
 
 export function IncomeLineChart() {
   return (
@@ -16,7 +16,7 @@ export function IncomeLineChart() {
           <XAxis dataKey="label" {...axis} />
           <YAxis {...axis} />
           <Tooltip {...tip} />
-          <ReferenceLine y={getBaseline()} stroke="var(--warn)" strokeDasharray="6 5" label={{ value: "Baseline", fill: "var(--warn)", fontSize: 11, position: "insideTopLeft" }} />
+          <ReferenceLine y={settings.baselineWeeklyIncome} stroke="var(--warn)" strokeDasharray="6 5" label={{ value: "Baseline", fill: "var(--warn)", fontSize: 11, position: "insideTopLeft" }} />
           <Line type="monotone" dataKey="income" stroke="var(--primary)" strokeWidth={2.5} dot={{ r: 3, fill: "var(--primary)" }} />
         </LineChart>
       </ResponsiveContainer>

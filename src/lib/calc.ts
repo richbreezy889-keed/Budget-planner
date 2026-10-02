@@ -1,29 +1,30 @@
-// Placeholder money calculations. All return mock values — implement later.
-import { settings, type Category, type Bill } from "./mockData";
+// Placeholder money calculations. Signatures are final; bodies return mock
+// values and should be replaced with real logic.
+import type { BillPeriod, Category, CategoryType, Goal, IncomeEntry, RecurringBill, Settings, Transaction } from "./types";
 
 export type SafeStatus = "safe" | "caution" | "danger";
+export type AllocationKey = "Essentials" | "Savings" | "Goals" | "Flexible" | "Buffer";
+export interface Allocation { key: AllocationKey; amount: number }
 
-export interface Allocation { key: "Essentials" | "Savings" | "Goals" | "Flexible" | "Buffer"; amount: number }
-
-export function formatMoney(value: number, opts: { cents?: boolean; sign?: boolean } = {}): string {
-  const abs = Math.abs(value);
-  const s = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: settings.currency,
-    minimumFractionDigits: opts.cents ? 2 : 0,
-    maximumFractionDigits: opts.cents ? 2 : 0,
-  }).format(abs);
-  if (value < 0) return `−${s}`;
-  return opts.sign ? `+${s}` : s;
+export function weeklyEquivalent(amount: number, period: BillPeriod): number {
+  return period === "weekly" ? amount : period === "monthly" ? amount * 0.2308 : amount * 0.0192; // mock
 }
 
-export function getSafeToSpend(): number { return 186; }
-export function getFlexibleBudgetThisWeek(): number { return 260; }
-export function getSafeStatus(): SafeStatus { return "safe"; }
-export function getIncomeThisWeek(): number { return 825; }
-export function getIncomeEntryCount(): number { return 2; }
+export function weeklyEssentials(_bills: RecurringBill[], _categories: Category[]): number { return 405; }
 
-export function getWaterfall(): Allocation[] {
+export function weeklyBillsTotal(_bills: RecurringBill[]): number { return 389.31; }
+
+export function incomeForWeek(_entries: IncomeEntry[], _weekStart: string): number { return 825; }
+
+export function flexibleBudgetForWeek(_categories: Category[]): number { return 260; }
+
+export function safeToSpend(_settings: Settings, _entries: IncomeEntry[], _transactions: Transaction[], _categories: Category[], _bills: RecurringBill[], _goals: Goal[]): number {
+  return 186;
+}
+
+export function safeStatus(_safeToSpend: number, _flexibleBudget: number): SafeStatus { return "safe"; }
+
+export function weeklyWaterfall(_income: number, _categories: Category[], _bills: RecurringBill[], _goals: Goal[]): Allocation[] {
   return [
     { key: "Essentials", amount: 405 },
     { key: "Savings", amount: 130 },
@@ -33,24 +34,31 @@ export function getWaterfall(): Allocation[] {
   ];
 }
 
-export function getBufferBalance(): number { return 2915; }
-export function getRunwayWeeks(): number { return 3.6; }
-export function getAverageIncome(_weeks: 4 | 8): number { return _weeks === 4 ? 909 : 896; }
-export function getBaseline(): number { return settings.baselineWeeklyIncome; }
+export function bufferBalance(_settings: Settings, _entries: IncomeEntry[], _transactions: Transaction[]): number { return 2915; }
 
-export function weeklyEquivalent(_bill: Pick<Bill, "amount" | "period">): number {
-  const map: Record<string, number> = { b1: 334.62, b2: 19.62, b3: 12.69, b4: 6.92, b5: 12, b6: 3.46 };
-  return map[(_bill as Bill).id] ?? _bill.amount;
-}
-export function getTotalWeeklyBills(): number { return 389.31; }
+export function bufferChangeThisWeek(_settings: Settings, _entries: IncomeEntry[]): number { return 80; }
 
-export function getCategoryProgress(c: Category): number {
-  return Math.min(1, c.spent / c.amount); // mock ratio
+export function runwayWeeks(_bufferBalance: number, _baselineWeeklyIncome: number): number { return 3.6; }
+
+export function rollingAverageIncome(_entries: IncomeEntry[], weeks: number): number { return weeks === 4 ? 909 : 896; }
+
+export function spentInCategory(categoryId: string, _transactions: Transaction[], _period: Category["budgetPeriod"]): number {
+  const mock: Record<string, number> = { rent: 1450, groceries: 74.9, transport: 32, utilities: 98, emergency: 60, retirement: 150, dining: 41.5, coffee: 17.5, fun: 12 };
+  return mock[categoryId] ?? 0;
 }
-export function getGroupTotal(_group: string): number {
-  return ({ Essential: 405, Savings: 129, Flexible: 130 } as Record<string, number>)[_group] ?? 0;
+
+export function categoryProgress(spent: number, budgetAmount: number): number { return Math.min(1, spent / budgetAmount); }
+
+export function weeklyTotalForType(type: CategoryType, _categories: Category[]): number {
+  return ({ essential: 405, savings: 129, flexible: 130 } as const)[type];
 }
-export function getGoalProgress(saved: number, target: number): number { return saved / target; }
-export function getWeeksToGoal(_goalId: string): number {
-  return ({ g1: 17, g2: 41, g3: 3 } as Record<string, number>)[_goalId] ?? 0;
+
+export function goalProgress(goal: Goal): number { return goal.savedAmount / goal.targetAmount; }
+
+export function goalWeeklyContribution(goal: Goal): number {
+  return ({ g1: 40, g2: 25, g3: 15 } as Record<string, number>)[goal.id] ?? 0;
+}
+
+export function weeksToGoal(goal: Goal): number {
+  return ({ g1: 17, g2: 41, g3: 3 } as Record<string, number>)[goal.id] ?? 0;
 }
