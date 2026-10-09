@@ -318,3 +318,19 @@ export function rollingAverageIncomeAsOf(
   const total = available.reduce((sum, start) => sum + incomeInWeek(entries, start), 0);
   return total / available.length;
 }
+
+export function suggestedBaseline(entries: IncomeEntry[], asOfWeekStart: ISODate): number | null {
+  if (entries.length === 0) return null;
+  const firstEntryWeek = entries
+    .map((entry) => weekStartRelativeTo(entry.date, asOfWeekStart))
+    .reduce((min, week) => (week < min ? week : min));
+  const reference = parseLocalDate(asOfWeekStart);
+  const available: number[] = [];
+  for (let k = 1; k <= 8; k++) {
+    const start = toISODate(addDays(reference, -7 * k));
+    if (start >= firstEntryWeek) available.push(incomeInWeek(entries, start));
+  }
+  if (available.length < 4) return null;
+  const lowestFour = [...available].sort((a, b) => a - b).slice(0, 4);
+  return lowestFour.reduce((sum, value) => sum + value, 0) / 4;
+}

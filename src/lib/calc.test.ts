@@ -11,6 +11,7 @@ import {
   rollingAverageIncomeAsOf,
   runwayWeeksFromEssentials,
   spentInWeek,
+  suggestedBaseline,
   weekEnd,
   weekStart,
   weeklyEssentials,
@@ -348,5 +349,39 @@ describe("rollingAverageIncomeAsOf", () => {
   it("returns null when no completed week has an entry or history", () => {
     expect(rollingAverageIncomeAsOf([], 4, "2026-10-05")).toBeNull();
     expect(rollingAverageIncomeAsOf(entries, 4, "2026-09-07")).toBeNull();
+  });
+});
+
+describe("suggestedBaseline", () => {
+  const weekly: IncomeEntry[] = [
+    { id: "w1", date: "2026-08-03", amount: 900, source: "s", note: "" },
+    { id: "w2", date: "2026-08-10", amount: 300, source: "s", note: "" },
+    { id: "w3", date: "2026-08-17", amount: 700, source: "s", note: "" },
+    { id: "w4", date: "2026-08-24", amount: 200, source: "s", note: "" },
+    { id: "w5", date: "2026-08-31", amount: 800, source: "s", note: "" },
+    { id: "w6", date: "2026-09-07", amount: 400, source: "s", note: "" },
+    { id: "w7", date: "2026-09-14", amount: 600, source: "s", note: "" },
+    { id: "w8", date: "2026-09-21", amount: 500, source: "s", note: "" },
+  ];
+
+  it("averages the lowest four of the last eight completed weeks", () => {
+    expect(suggestedBaseline(weekly, "2026-09-28")).toBeCloseTo(350, 6);
+  });
+
+  it("ignores weeks older than eight completed weeks", () => {
+    const older: IncomeEntry[] = [
+      ...weekly,
+      { id: "w0", date: "2026-07-27", amount: 50, source: "s", note: "" },
+    ];
+    expect(suggestedBaseline(older, "2026-09-28")).toBeCloseTo(350, 6);
+  });
+
+  it("returns null with fewer than four weeks of history", () => {
+    expect(suggestedBaseline([], "2026-09-28")).toBeNull();
+    const recent: IncomeEntry[] = [
+      { id: "r1", date: "2026-09-14", amount: 500, source: "s", note: "" },
+      { id: "r2", date: "2026-09-21", amount: 600, source: "s", note: "" },
+    ];
+    expect(suggestedBaseline(recent, "2026-09-28")).toBeNull();
   });
 });
