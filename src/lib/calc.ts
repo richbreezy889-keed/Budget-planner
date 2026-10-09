@@ -6,9 +6,11 @@ import type {
   CategoryType,
   Goal,
   IncomeEntry,
+  ISODate,
   RecurringBill,
   Settings,
   Transaction,
+  WeekStartDay,
 } from "./types";
 
 export type SafeStatus = "safe" | "caution" | "danger";
@@ -127,4 +129,32 @@ export function goalWeeklyContribution(goal: Goal): number {
 
 export function weeksToGoal(goal: Goal): number {
   return ({ g1: 17, g2: 41, g3: 3 } as Record<string, number>)[goal.id] ?? 0;
+}
+
+function parseLocalDate(iso: ISODate): Date {
+  const parts = iso.split("-");
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+function toISODate(date: Date): ISODate {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+const weekStartIndex: Record<WeekStartDay, number> = { Sunday: 0, Monday: 1, Saturday: 6 };
+
+export function weekStart(date: ISODate, weekStartDay: WeekStartDay): ISODate {
+  const d = parseLocalDate(date);
+  const diff = (d.getDay() - weekStartIndex[weekStartDay] + 7) % 7;
+  return toISODate(addDays(d, -diff));
+}
+
+export function weekEnd(date: ISODate, weekStartDay: WeekStartDay): ISODate {
+  return toISODate(addDays(parseLocalDate(weekStart(date, weekStartDay)), 6));
 }
