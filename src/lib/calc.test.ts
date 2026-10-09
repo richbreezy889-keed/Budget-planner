@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { bills, categories, goals, incomeEntries, transactions } from "./mockData";
+import {
+  bills,
+  categories,
+  currentWeek,
+  goals,
+  incomeEntries,
+  settings,
+  transactions,
+} from "./mockData";
 import type { Category, Goal, IncomeEntry, RecurringBill, Transaction } from "./types";
 import {
   allocateWaterfall,
@@ -413,5 +421,92 @@ describe("safeToSpendAmount / safeToSpendStatus", () => {
   it("handles a zero budget without dividing by zero", () => {
     expect(safeToSpendStatus(0, 0)).toBe("caution");
     expect(safeToSpendStatus(-1, 0)).toBe("danger");
+  });
+});
+
+describe("integration: mock data through the whole chain", () => {
+  it("keeps the weekly plan internally consistent", () => {
+    const today = currentWeek.start;
+    const planned = weeklyPlannedByType(categories, bills);
+    const goalsNeeded = goals.reduce(
+      (sum, goal) => sum + goalWeeklyContributionAsOf(goal, today),
+      0,
+    );
+    const plan = {
+      essentials: planned.essential,
+      savings: planned.savings,
+      goals: goalsNeeded,
+      flexible: planned.flexible,
+    };
+
+    const essentialsSum = categories
+      .filter((category) => category.type === "essential")
+      .reduce((sum, category) => sum + categoryWeeklyPlanned(category, bills), 0);
+    expect(planned.essential).toBeCloseTo(essentialsSum, 6);
+    expect(weeklyEssentials(categories, bills)).toBeCloseTo(essentialsSum, 6);
+
+    const income = incomeInWeek(incomeEntries, currentWeek.start);
+    expect(income).toBeCloseTo(825, 6);
+
+    const result = allocateWaterfall(income, plan);
+    const buckets: (keyof typeof plan)[] = ["essentials", "savings", "goals", "flexible"];
+    let allocatedTotal = 0;
+    for (const bucket of buckets) {
+      allocatedTotal += result.allocated[bucket];
+      expect(result.allocated[bucket] + result.shortfall[bucket]).toBeCloseTo(plan[bucket], 6);
+      expect(result.allocated[bucket]).toBeLessThanOrEqual(plan[bucket] + 1e-9);
+    }
+    expect(allocatedTotal + result.buffer).toBeCloseTo(income, 6);
+    expect(result.allocated.essentials).toBeCloseTo(essentialsSum, 6);
+    expect(result.buffer).toBeCloseTo(
+      income - essentialsSum - planned.savings - goalsNeeded - planned.flexible,
+      6,
+    );
+  });
+
+  it("keeps the buffer and runway internally consistent", () => {
+    const nextWeekStart = "2026-10-05";
+    const buffer = bufferBalanceAsOf(
+      settings.openingBufferBalance,
+      incomeEntries,
+      transactions,
+      nextWeekStart,
+    );
+    const spentBefore = transactions
+      .filter((transaction) => transaction.date < nextWeekStart)
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+    const incomeBefore = incomeEntries
+      .filter((entry) => entry.date < nextWeekStart)
+      .reduce((sum, entry) => sum + entry.amount, 0);
+    expect(buffer).toBeCloseTo(settings.openingBufferBalance + incomeBefore - spentBefore, 6);
+    expect(buffer).toBeCloseTo(2987.1, 6);
+
+    const change = bufferChangeInWeek(incomeEntries, transactions, currentWeek.start);
+    expect(change).toBeCloseTo(
+      incomeInWeek(incomeEntries, currentWeek.start) -
+        spentInWeek(transactions, null, currentWeek.start),
+      6,
+    );
+
+    const essentials = weeklyEssentials(categories, bills);
+    const runway = runwayWeeksFromEssentials(buffer, essentials);
+    expect(runway).not.toBeNull();
+    if (runway !== null) {
+      expect(runway).toBeCloseTo(buffer / essentials, 6);
+      expect(runway).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps safe-to-spend consistent with flexible spending", () => {
+    const flexibleIds = categories
+      .filter((category) => category.type === "flexible")
+      .map((category) => category.id);
+    const flexibleBudget = weeklyPlannedByType(categories, bills).flexible;
+    const flexibleSpent = spentInWeek(transactions, flexibleIds, currentWeek.start);
+    const remaining = safeToSpendAmount(flexibleBudget, flexibleSpent);
+    expect(remaining).toBeCloseTo(flexibleBudget - flexibleSpent, 6);
+    expect(safeToSpendStatus(remaining, flexibleBudget)).toBe(
+      remaining < 0 ? "danger" : remaining > 0.2 * flexibleBudget ? "safe" : "caution",
+    );
   });
 });
