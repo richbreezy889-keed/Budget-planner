@@ -19,7 +19,9 @@ export interface Allocation {
 }
 
 export function weeklyEquivalent(amount: number, period: BillPeriod): number {
-  return period === "weekly" ? amount : period === "monthly" ? amount * 0.2308 : amount * 0.0192; // mock
+  if (period === "weekly") return amount;
+  if (period === "monthly") return (amount * 12) / 52;
+  return amount / 52;
 }
 
 export function weeklyEssentials(_bills: RecurringBill[], _categories: Category[]): number {
