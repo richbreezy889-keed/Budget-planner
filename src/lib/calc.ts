@@ -186,3 +186,25 @@ export function categoryWeeklyPlanned(category: Category, bills: RecurringBill[]
   }
   return weeklyEquivalent(category.budgetAmount, category.budgetPeriod);
 }
+
+function isInWeek(date: ISODate, weekStartDate: ISODate): boolean {
+  const end = toISODate(addDays(parseLocalDate(weekStartDate), 6));
+  return date >= weekStartDate && date <= end;
+}
+
+export function incomeInWeek(entries: IncomeEntry[], weekStartDate: ISODate): number {
+  return entries
+    .filter((entry) => isInWeek(entry.date, weekStartDate))
+    .reduce((sum, entry) => sum + entry.amount, 0);
+}
+
+export function spentInWeek(
+  transactions: Transaction[],
+  categoryIds: string[] | null,
+  weekStartDate: ISODate,
+): number {
+  return transactions
+    .filter((transaction) => isInWeek(transaction.date, weekStartDate))
+    .filter((transaction) => categoryIds === null || categoryIds.includes(transaction.categoryId))
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+}

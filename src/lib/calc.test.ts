@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { bills, categories } from "./mockData";
+import { bills, categories, incomeEntries, transactions } from "./mockData";
 import type { Category, RecurringBill } from "./types";
 import {
   categoryWeeklyPlanned,
+  incomeInWeek,
+  spentInWeek,
   weekEnd,
   weekStart,
   weeklyEssentials,
@@ -125,5 +127,35 @@ describe("weeklyPlannedByType / weeklyEssentials", () => {
       flexible: 0,
       weeklyEssentials: 0,
     });
+  });
+});
+
+describe("incomeInWeek / spentInWeek", () => {
+  it("sums income inside the week", () => {
+    expect(incomeInWeek(incomeEntries, "2026-09-28")).toBeCloseTo(825, 6);
+  });
+
+  it("ignores income outside the week", () => {
+    expect(incomeInWeek(incomeEntries, "2026-09-21")).toBeCloseTo(0, 6);
+    expect(incomeInWeek(incomeEntries, "2026-10-05")).toBeCloseTo(0, 6);
+  });
+
+  it("includes both week boundaries", () => {
+    const edges = [
+      { id: "a", date: "2026-09-28", amount: 10, source: "s", note: "" },
+      { id: "b", date: "2026-10-04", amount: 5, source: "s", note: "" },
+      { id: "c", date: "2026-10-05", amount: 100, source: "s", note: "" },
+    ];
+    expect(incomeInWeek(edges, "2026-09-28")).toBeCloseTo(15, 6);
+  });
+
+  it("sums all spending when no category filter is given", () => {
+    expect(spentInWeek(transactions, null, "2026-09-28")).toBeCloseTo(237.9, 6);
+  });
+
+  it("filters spending by category", () => {
+    expect(spentInWeek(transactions, ["groceries"], "2026-09-28")).toBeCloseTo(74.9, 6);
+    expect(spentInWeek(transactions, ["groceries", "coffee"], "2026-09-28")).toBeCloseTo(92.4, 6);
+    expect(spentInWeek(transactions, [], "2026-09-28")).toBeCloseTo(0, 6);
   });
 });
