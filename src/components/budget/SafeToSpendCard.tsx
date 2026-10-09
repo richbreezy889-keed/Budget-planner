@@ -24,7 +24,6 @@ export function SafeToSpendCard() {
   const s = statusMap[safeStatus(safe, flex)];
   return (
     <div className="glass relative overflow-hidden rounded-[20px] p-6 sm:p-7">
-      <div className="slab-a pointer-events-none absolute inset-y-0 right-0 w-2/3 origin-top-right translate-x-1/4 rotate-[16deg] border-0" />
       <div className="relative flex flex-wrap items-start justify-between gap-6">
         <div>
           <div className="label-caps">Safe to spend this week</div>

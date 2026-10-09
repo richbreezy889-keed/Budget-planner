@@ -10,8 +10,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative min-h-screen overflow-x-hidden">
       <div className="ambient pointer-events-none fixed inset-0" />
-      <div className="slab-a drift-a pointer-events-none fixed -right-40 -top-40 h-[560px] w-[560px] rounded-[46px] [--r:18deg]" />
-      <div className="slab-b drift-b pointer-events-none fixed -bottom-48 -left-40 h-[620px] w-[620px] rounded-[46px] [--r:-14deg]" />
 
       <div className="relative mx-auto max-w-[1200px] px-4 pb-28 pt-6 sm:px-6 lg:px-10 lg:pb-10 lg:pt-8">
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
