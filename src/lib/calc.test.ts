@@ -446,6 +446,63 @@ describe("safeToSpendAmount / safeToSpendStatus", () => {
   });
 });
 
+describe("DST timezone stability", () => {
+  it("keeps weeks stable across New York DST transitions", () => {
+    // Spring forward 2026-03-08 and fall back 2026-11-01.
+    expect(weekStart("2026-03-08", "Sunday")).toBe("2026-03-08");
+    expect(weekEnd("2026-03-08", "Sunday")).toBe("2026-03-14");
+    expect(weekStart("2026-03-10", "Monday")).toBe("2026-03-09");
+    expect(weekEnd("2026-03-10", "Monday")).toBe("2026-03-15");
+    expect(weekStart("2026-11-01", "Sunday")).toBe("2026-11-01");
+    expect(weekEnd("2026-11-01", "Sunday")).toBe("2026-11-07");
+    expect(weekStart("2026-11-03", "Monday")).toBe("2026-11-02");
+    expect(weekEnd("2026-11-03", "Monday")).toBe("2026-11-08");
+  });
+
+  it("keeps weeks stable across Auckland DST transitions", () => {
+    // DST ends 2026-04-05 and starts 2026-09-27.
+    expect(weekStart("2026-04-05", "Sunday")).toBe("2026-04-05");
+    expect(weekEnd("2026-04-05", "Sunday")).toBe("2026-04-11");
+    expect(weekStart("2026-04-07", "Monday")).toBe("2026-04-06");
+    expect(weekEnd("2026-04-07", "Monday")).toBe("2026-04-12");
+    expect(weekStart("2026-09-27", "Sunday")).toBe("2026-09-27");
+    expect(weekEnd("2026-09-27", "Sunday")).toBe("2026-10-03");
+    expect(weekStart("2026-09-29", "Monday")).toBe("2026-09-28");
+    expect(weekEnd("2026-09-29", "Monday")).toBe("2026-10-04");
+  });
+
+  it("counts goal weeks correctly across DST transitions", () => {
+    const base: Goal = {
+      id: "x",
+      name: "X",
+      targetAmount: 200,
+      savedAmount: 0,
+      targetDate: "2026-03-16",
+    };
+    // New York spring forward inside a two-week span.
+    expect(goalWeeklyContributionAsOf(base, "2026-03-02")).toBeCloseTo(100, 6);
+    // New York fall back inside a two-week span.
+    expect(
+      goalWeeklyContributionAsOf({ ...base, targetDate: "2026-11-09" }, "2026-10-26"),
+    ).toBeCloseTo(100, 6);
+    // Auckland DST end inside a two-week span.
+    expect(
+      goalWeeklyContributionAsOf({ ...base, targetDate: "2026-04-13" }, "2026-03-30"),
+    ).toBeCloseTo(100, 6);
+    // Auckland DST start inside a two-week span.
+    expect(
+      goalWeeklyContributionAsOf({ ...base, targetDate: "2026-10-05" }, "2026-09-21"),
+    ).toBeCloseTo(100, 6);
+    // A single DST-crossing week is still one week.
+    expect(
+      goalWeeklyContributionAsOf(
+        { ...base, targetAmount: 70, targetDate: "2026-03-09" },
+        "2026-03-02",
+      ),
+    ).toBeCloseTo(70, 6);
+  });
+});
+
 describe("integration: mock data through the whole chain", () => {
   it("keeps the weekly plan internally consistent", () => {
     const today = currentWeek.start;
