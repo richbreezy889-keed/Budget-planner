@@ -10,6 +10,8 @@ import {
   incomeInWeek,
   rollingAverageIncomeAsOf,
   runwayWeeksFromEssentials,
+  safeToSpendAmount,
+  safeToSpendStatus,
   spentInWeek,
   suggestedBaseline,
   weekEnd,
@@ -383,5 +385,33 @@ describe("suggestedBaseline", () => {
       { id: "r2", date: "2026-09-21", amount: 600, source: "s", note: "" },
     ];
     expect(suggestedBaseline(recent, "2026-09-28")).toBeNull();
+  });
+});
+
+describe("safeToSpendAmount / safeToSpendStatus", () => {
+  it("subtracts spending from the flexible budget", () => {
+    expect(safeToSpendAmount(260, 74.9)).toBeCloseTo(185.1, 6);
+    expect(safeToSpendAmount(260, 300)).toBeCloseTo(-40, 6);
+  });
+
+  it("is safe above 20% of the budget", () => {
+    expect(safeToSpendStatus(186, 260)).toBe("safe");
+    expect(safeToSpendStatus(53, 260)).toBe("safe");
+  });
+
+  it("is caution from zero up to 20% inclusive", () => {
+    expect(safeToSpendStatus(52, 260)).toBe("caution");
+    expect(safeToSpendStatus(51.99, 260)).toBe("caution");
+    expect(safeToSpendStatus(0, 260)).toBe("caution");
+  });
+
+  it("is danger below zero", () => {
+    expect(safeToSpendStatus(-0.01, 260)).toBe("danger");
+    expect(safeToSpendStatus(-40, 260)).toBe("danger");
+  });
+
+  it("handles a zero budget without dividing by zero", () => {
+    expect(safeToSpendStatus(0, 0)).toBe("caution");
+    expect(safeToSpendStatus(-1, 0)).toBe("danger");
   });
 });

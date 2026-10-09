@@ -334,3 +334,16 @@ export function suggestedBaseline(entries: IncomeEntry[], asOfWeekStart: ISODate
   const lowestFour = [...available].sort((a, b) => a - b).slice(0, 4);
   return lowestFour.reduce((sum, value) => sum + value, 0) / 4;
 }
+
+export function safeToSpendAmount(
+  flexibleBudgetWeekly: number,
+  flexibleSpentThisWeek: number,
+): number {
+  return flexibleBudgetWeekly - flexibleSpentThisWeek;
+}
+
+export function safeToSpendStatus(remaining: number, flexibleBudgetWeekly: number): SafeStatus {
+  if (remaining < 0) return "danger";
+  if (remaining > 0.2 * flexibleBudgetWeekly) return "safe";
+  return "caution";
+}
