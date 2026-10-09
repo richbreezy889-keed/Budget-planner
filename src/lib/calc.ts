@@ -286,3 +286,9 @@ export function bufferChangeInWeek(
     incomeInWeek(incomeEntries, weekStartDate) - spentInWeek(transactions, null, weekStartDate)
   );
 }
+
+export function runwayWeeksFromEssentials(buffer: number, essentials: number): number | null {
+  if (essentials <= 0) return null;
+  if (buffer <= 0) return 0;
+  return buffer / essentials;
+}

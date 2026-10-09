@@ -8,6 +8,7 @@ import {
   categoryWeeklyPlanned,
   goalWeeklyContributionAsOf,
   incomeInWeek,
+  runwayWeeksFromEssentials,
   spentInWeek,
   weekEnd,
   weekStart,
@@ -296,5 +297,28 @@ describe("bufferChangeInWeek", () => {
 
   it("reports zero for a week with no activity", () => {
     expect(bufferChangeInWeek(incomeEntries, transactions, "2026-09-21")).toBeCloseTo(0, 6);
+  });
+});
+
+describe("runwayWeeksFromEssentials", () => {
+  it("returns null when essentials are zero or negative", () => {
+    expect(runwayWeeksFromEssentials(1000, 0)).toBeNull();
+    expect(runwayWeeksFromEssentials(1000, -5)).toBeNull();
+  });
+
+  it("returns zero when the buffer is empty or negative", () => {
+    expect(runwayWeeksFromEssentials(0, 100)).toBe(0);
+    expect(runwayWeeksFromEssentials(-50, 100)).toBe(0);
+  });
+
+  it("divides the buffer by weekly essentials", () => {
+    expect(runwayWeeksFromEssentials(300, 100)).toBeCloseTo(3, 6);
+    expect(runwayWeeksFromEssentials(650, 200)).toBeCloseTo(3.25, 6);
+  });
+
+  it("matches the mock buffer and essentials", () => {
+    const buffer = bufferBalanceAsOf(2400, incomeEntries, transactions, "2026-10-05");
+    const essentials = weeklyEssentials(categories, bills);
+    expect(runwayWeeksFromEssentials(buffer, essentials)).toBeCloseTo(2987.1 / 532.3077, 4);
   });
 });
