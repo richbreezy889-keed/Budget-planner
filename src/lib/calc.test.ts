@@ -101,23 +101,45 @@ describe("categoryWeeklyPlanned", () => {
     expect(categoryWeeklyPlanned(cat("retirement"), bills)).toBeCloseTo(69.2308, 4);
   });
 
-  it("sums linked bills' weekly equivalents and ignores the category budget", () => {
+  it("uses the bills total when linked bills exceed the budget", () => {
+    // utilities bills = 85+55+30 monthly + 180 yearly = 42.6923 > budget 160/month = 36.9231
     expect(categoryWeeklyPlanned(cat("utilities"), bills)).toBeCloseTo(42.6923, 4);
-    expect(categoryWeeklyPlanned(cat("fun"), bills)).toBeCloseTo(12, 4);
+  });
+
+  it("keeps the budget when the budget exceeds the linked bills", () => {
+    // fun budget = 50/week > gym bill 12/week
+    expect(categoryWeeklyPlanned(cat("fun"), bills)).toBeCloseTo(50, 4);
+    // rent budget and bill are both 1450/month
     expect(categoryWeeklyPlanned(cat("rent"), bills)).toBeCloseTo(334.6154, 4);
   });
 
-  it("counts each linked bill exactly once", () => {
+  it("never adds budget and bills together", () => {
     const custom: Category = {
       id: "test",
       name: "Test",
       type: "flexible",
-      budgetAmount: 999,
+      budgetAmount: 100,
       budgetPeriod: "weekly",
     };
     const linked: RecurringBill[] = [
-      { id: "x1", name: "X1", amount: 10, period: "weekly", categoryId: "test", dueDay: "Monday" },
-      { id: "x2", name: "X2", amount: 20, period: "weekly", categoryId: "test", dueDay: "Monday" },
+      { id: "x1", name: "X1", amount: 20, period: "weekly", categoryId: "test", dueDay: "Monday" },
+      { id: "x2", name: "X2", amount: 10, period: "weekly", categoryId: "test", dueDay: "Monday" },
+    ];
+    expect(categoryWeeklyPlanned(custom, linked)).toBeCloseTo(100, 6);
+    expect(categoryWeeklyPlanned(custom, linked)).not.toBeCloseTo(130, 6);
+  });
+
+  it("sums two bills when they exceed the budget", () => {
+    const custom: Category = {
+      id: "test",
+      name: "Test",
+      type: "flexible",
+      budgetAmount: 25,
+      budgetPeriod: "weekly",
+    };
+    const linked: RecurringBill[] = [
+      { id: "x1", name: "X1", amount: 20, period: "weekly", categoryId: "test", dueDay: "Monday" },
+      { id: "x2", name: "X2", amount: 10, period: "weekly", categoryId: "test", dueDay: "Monday" },
     ];
     expect(categoryWeeklyPlanned(custom, linked)).toBeCloseTo(30, 6);
   });
@@ -128,7 +150,7 @@ describe("weeklyPlannedByType / weeklyEssentials", () => {
     const planned = weeklyPlannedByType(categories, bills);
     expect(planned.essential).toBeCloseTo(532.3077, 4);
     expect(planned.savings).toBeCloseTo(129.2308, 4);
-    expect(planned.flexible).toBeCloseTo(92, 4);
+    expect(planned.flexible).toBeCloseTo(130, 4);
     expect(planned.weeklyEssentials).toBeCloseTo(532.3077, 4);
   });
 
@@ -458,10 +480,11 @@ describe("integration: mock data through the whole chain", () => {
     }
     expect(allocatedTotal + result.buffer).toBeCloseTo(income, 6);
     expect(result.allocated.essentials).toBeCloseTo(essentialsSum, 6);
-    expect(result.buffer).toBeCloseTo(
-      income - essentialsSum - planned.savings - goalsNeeded - planned.flexible,
-      6,
-    );
+    const planTotal = essentialsSum + planned.savings + goalsNeeded + planned.flexible;
+    expect(result.buffer).toBeCloseTo(Math.max(0, income - planTotal), 6);
+    // With the larger-of rule the flexible plan grows, so income no longer covers the plan.
+    expect(planTotal).toBeGreaterThan(income);
+    expect(result.buffer).toBeCloseTo(0, 6);
   });
 
   it("keeps the buffer and runway internally consistent", () => {
