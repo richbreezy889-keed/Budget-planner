@@ -1,5 +1,6 @@
-// Placeholder money calculations. Signatures are final; bodies return mock
-// values and should be replaced with real logic.
+// Pure money and date calculations for the budget engine.
+// ISO date-only strings are parsed as LOCAL dates (never shifted through UTC),
+// and no monetary rounding happens here — round only when formatting via formatMoney.
 import type {
   BillPeriod,
   Category,
@@ -50,18 +51,22 @@ export function weeklyEssentials(categories: Category[], bills: RecurringBill[])
   return weeklyPlannedByType(categories, bills).essential;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function weeklyBillsTotal(_bills: RecurringBill[]): number {
   return 389.31;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function incomeForWeek(_entries: IncomeEntry[], _weekStart: string): number {
   return 825;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function flexibleBudgetForWeek(_categories: Category[]): number {
   return 260;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function safeToSpend(
   _settings: Settings,
   _entries: IncomeEntry[],
@@ -73,10 +78,12 @@ export function safeToSpend(
   return 186;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function safeStatus(_safeToSpend: number, _flexibleBudget: number): SafeStatus {
   return "safe";
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function weeklyWaterfall(
   _income: number,
   _categories: Category[],
@@ -92,6 +99,7 @@ export function weeklyWaterfall(
   ];
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function bufferBalance(
   _settings: Settings,
   _entries: IncomeEntry[],
@@ -100,14 +108,17 @@ export function bufferBalance(
   return 2915;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function bufferChangeThisWeek(_settings: Settings, _entries: IncomeEntry[]): number {
   return 80;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function runwayWeeks(_bufferBalance: number, _baselineWeeklyIncome: number): number {
   return 3.6;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function rollingAverageIncome(_entries: IncomeEntry[], weeks: number): number {
   return weeks === 4 ? 909 : 896;
 }
@@ -147,6 +158,7 @@ export function categoryProgress(spent: number, budgetAmount: number): number {
   return Math.min(1, ratio);
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function weeklyTotalForType(type: CategoryType, _categories: Category[]): number {
   return ({ essential: 405, savings: 129, flexible: 130 } as const)[type];
 }
@@ -155,10 +167,12 @@ export function goalProgress(goal: Goal): number {
   return goal.savedAmount / goal.targetAmount;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function goalWeeklyContribution(goal: Goal): number {
   return ({ g1: 40, g2: 25, g3: 15 } as Record<string, number>)[goal.id] ?? 0;
 }
 
+/** @deprecated mock, removed in Task 3 */
 export function weeksToGoal(goal: Goal): number {
   return ({ g1: 17, g2: 41, g3: 3 } as Record<string, number>)[goal.id] ?? 0;
 }
