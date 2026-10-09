@@ -11,7 +11,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="relative min-h-screen overflow-x-hidden">
       <div className="ambient pointer-events-none fixed inset-0" />
 
-      <div className="relative mx-auto max-w-[1200px] px-4 pb-28 pt-6 sm:px-6 lg:px-10 lg:pb-10 lg:pt-8">
+      <div className="relative mx-auto max-w-[1200px] px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 lg:px-10 lg:pb-10 lg:pt-8">
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="glow-pulse grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-primary font-display text-lg font-extrabold text-primary-foreground">
