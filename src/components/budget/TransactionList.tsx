@@ -42,7 +42,7 @@ export function TransactionList() {
             </span>
             <span className="truncate text-[13px]">{t.note}</span>
             <span className="hidden text-[12px] text-muted-foreground sm:block">{t.label}</span>
-            <span className={`text-right text-[13px] ${t.signed > 0 ? "text-safe" : ""}`}>
+            <span className={`font-mono text-right text-[13px] ${t.signed > 0 ? "text-safe" : ""}`}>
               {formatMoney(t.signed, settings.currency, { cents: true, sign: true })}
             </span>
           </li>

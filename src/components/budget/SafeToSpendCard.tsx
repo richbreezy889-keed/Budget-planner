@@ -27,7 +27,7 @@ export function SafeToSpendCard() {
       <div className="relative flex flex-wrap items-start justify-between gap-6">
         <div>
           <div className="label-caps">Safe to spend this week</div>
-          <div className="mt-2 font-display text-[clamp(2.8rem,8vw,4.5rem)] font-bold leading-none">
+          <div className="mt-2 font-mono text-[clamp(2.8rem,8vw,4.5rem)] font-bold leading-none">
             {formatMoney(safe, cur)}
           </div>
           <div className="mt-3 flex items-center gap-2">
@@ -39,7 +39,7 @@ export function SafeToSpendCard() {
         </div>
         <div className="sm:text-right">
           <div className="label-caps">Income logged</div>
-          <div className="mt-1 font-display text-2xl font-semibold">
+          <div className="mt-1 font-mono text-2xl font-semibold">
             {formatMoney(incomeForWeek(incomeEntries, currentWeek.start), cur)}
           </div>
           <div className="mt-1 text-[12px] text-muted-foreground">

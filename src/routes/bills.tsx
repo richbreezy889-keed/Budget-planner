@@ -34,7 +34,7 @@ function BillsPage() {
       <Panel
         title="Recurring bills"
         action={
-          <span className="text-[12px] text-muted-foreground">
+          <span className="font-mono text-[12px] text-muted-foreground">
             {formatMoney(weeklyBillsTotal(bills), cur, { cents: true })}/week
           </span>
         }
@@ -54,14 +54,16 @@ function BillsPage() {
               {bills.map((b) => (
                 <tr key={b.id} className="border-t">
                   <td className="px-2 py-3">{b.name}</td>
-                  <td className="px-2 py-3 text-right">
+                  <td className="px-2 py-3 text-right font-mono">
                     {formatMoney(b.amount, cur, { cents: true })}
                   </td>
                   <td className="px-2 py-3 capitalize text-muted-foreground">{b.period}</td>
-                  <td className="px-2 py-3 text-right text-accent-foreground">
+                  <td className="px-2 py-3 text-right font-mono text-accent-foreground">
                     {formatMoney(weeklyEquivalent(b.amount, b.period), cur, { cents: true })}
                   </td>
-                  <td className="px-2 py-3 text-right text-muted-foreground">{b.dueDay}</td>
+                  <td className="px-2 py-3 text-right font-mono text-muted-foreground">
+                    {b.dueDay}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -81,7 +83,7 @@ function BillsPage() {
                   by {format(parseISO(g.targetDate), "MMM yyyy")}
                 </div>
               )}
-              <div className="mt-5 text-2xl font-display font-bold">
+              <div className="mt-5 font-mono text-2xl font-bold">
                 {formatMoney(g.savedAmount, cur)}{" "}
                 <span className="text-base font-normal text-muted-foreground">
                   / {formatMoney(g.targetAmount, cur)}
@@ -90,7 +92,7 @@ function BillsPage() {
               <div className="mt-3">
                 <Progress value={p} />
               </div>
-              <div className="mt-3 flex justify-between text-[12px] text-muted-foreground">
+              <div className="mt-3 flex justify-between font-mono text-[12px] text-muted-foreground">
                 <span>{Math.round(p * 100)}%</span>
                 <span>
                   {formatMoney(goalWeeklyContribution(g), cur)}/wk · {weeksToGoal(g)} wks left

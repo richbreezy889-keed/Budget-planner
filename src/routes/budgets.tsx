@@ -43,7 +43,7 @@ function BudgetsPage() {
             key={g.type}
             title={g.label}
             action={
-              <span className="text-[12px] text-muted-foreground">
+              <span className="font-mono text-[12px] text-muted-foreground">
                 {formatMoney(weeklyTotalForType(g.type, categories), cur)}/week
               </span>
             }
@@ -63,7 +63,7 @@ function BudgetsPage() {
                             {c.budgetPeriod}
                           </span>
                         </div>
-                        <span className="text-[13px]">
+                        <span className="font-mono text-[13px]">
                           {formatMoney(spent, cur)}{" "}
                           <span className="text-muted-foreground">
                             / {formatMoney(c.budgetAmount, cur)}

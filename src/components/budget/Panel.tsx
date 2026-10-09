@@ -38,7 +38,7 @@ export function Stat({ label, value, hint }: { label: string; value: string; hin
   return (
     <Panel>
       <div className="label-caps">{label}</div>
-      <div className="mt-2 font-display text-3xl font-bold">{value}</div>
+      <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
       {hint && <div className="mt-1 text-[12px] text-muted-foreground">{hint}</div>}
     </Panel>
   );

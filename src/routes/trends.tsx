@@ -41,13 +41,13 @@ function TrendsPage() {
               {monthlyRollup.map((m) => (
                 <tr key={m.month} className="border-t">
                   <td className="px-2 py-3">{m.month}</td>
-                  <td className="px-2 py-3 text-right">
+                  <td className="px-2 py-3 text-right font-mono">
                     {formatMoney(m.income, settings.currency)}
                   </td>
-                  <td className="px-2 py-3 text-right">
+                  <td className="px-2 py-3 text-right font-mono">
                     {formatMoney(m.spending, settings.currency)}
                   </td>
-                  <td className="px-2 py-3 text-right text-safe">
+                  <td className="px-2 py-3 text-right font-mono text-safe">
                     {formatMoney(m.saved, settings.currency, { sign: true })}
                   </td>
                 </tr>

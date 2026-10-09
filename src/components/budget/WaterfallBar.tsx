@@ -37,7 +37,7 @@ export function WaterfallBar() {
             <div className={`mb-1 h-2 w-2 rounded-full ${shade[p.key]}`} />
             {p.key}
             <br />
-            <span className="text-muted-foreground">
+            <span className="font-mono text-muted-foreground">
               {formatMoney(p.amount, settings.currency)}
             </span>
           </div>
