@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { bills, categories } from "./mockData";
 import type { Category, RecurringBill } from "./types";
-import { categoryWeeklyPlanned, weekEnd, weekStart, weeklyEquivalent } from "./calc";
+import {
+  categoryWeeklyPlanned,
+  weekEnd,
+  weekStart,
+  weeklyEssentials,
+  weeklyEquivalent,
+  weeklyPlannedByType,
+} from "./calc";
 
 const cat = (id: string): Category => {
   const found = categories.find((c) => c.id === id);
@@ -94,5 +101,29 @@ describe("categoryWeeklyPlanned", () => {
       { id: "x2", name: "X2", amount: 20, period: "weekly", categoryId: "test", dueDay: "Monday" },
     ];
     expect(categoryWeeklyPlanned(custom, linked)).toBeCloseTo(30, 6);
+  });
+});
+
+describe("weeklyPlannedByType / weeklyEssentials", () => {
+  it("sums planned amounts per category type", () => {
+    const planned = weeklyPlannedByType(categories, bills);
+    expect(planned.essential).toBeCloseTo(532.3077, 4);
+    expect(planned.savings).toBeCloseTo(129.2308, 4);
+    expect(planned.flexible).toBeCloseTo(92, 4);
+    expect(planned.weeklyEssentials).toBeCloseTo(532.3077, 4);
+  });
+
+  it("reports weeklyEssentials as exactly the essential total", () => {
+    const planned = weeklyPlannedByType(categories, bills);
+    expect(weeklyEssentials(categories, bills)).toBeCloseTo(planned.essential, 10);
+  });
+
+  it("returns zeroes when there are no categories", () => {
+    expect(weeklyPlannedByType([], [])).toEqual({
+      essential: 0,
+      savings: 0,
+      flexible: 0,
+      weeklyEssentials: 0,
+    });
   });
 });

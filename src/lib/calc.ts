@@ -26,8 +26,28 @@ export function weeklyEquivalent(amount: number, period: BillPeriod): number {
   return amount / 52;
 }
 
-export function weeklyEssentials(_bills: RecurringBill[], _categories: Category[]): number {
-  return 405;
+export interface PlannedByType {
+  essential: number;
+  savings: number;
+  flexible: number;
+  weeklyEssentials: number;
+}
+
+export function weeklyPlannedByType(categories: Category[], bills: RecurringBill[]): PlannedByType {
+  const sums: Record<CategoryType, number> = { essential: 0, savings: 0, flexible: 0 };
+  for (const category of categories) {
+    sums[category.type] += categoryWeeklyPlanned(category, bills);
+  }
+  return {
+    essential: sums.essential,
+    savings: sums.savings,
+    flexible: sums.flexible,
+    weeklyEssentials: sums.essential,
+  };
+}
+
+export function weeklyEssentials(categories: Category[], bills: RecurringBill[]): number {
+  return weeklyPlannedByType(categories, bills).essential;
 }
 
 export function weeklyBillsTotal(_bills: RecurringBill[]): number {
