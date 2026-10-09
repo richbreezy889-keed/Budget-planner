@@ -220,3 +220,44 @@ export function goalWeeklyContributionAsOf(goal: Goal, today: ISODate): number {
   const weeksLeft = Math.max(1, Math.ceil(daysBetween(today, goal.targetDate) / 7));
   return remaining / weeksLeft;
 }
+
+export type WaterfallBucket = "essentials" | "savings" | "goals" | "flexible";
+
+export interface WaterfallPlan {
+  essentials: number;
+  savings: number;
+  goals: number;
+  flexible: number;
+}
+
+export interface WaterfallResult {
+  allocated: Record<WaterfallBucket, number>;
+  buffer: number;
+  shortfall: Record<WaterfallBucket, number>;
+}
+
+const waterfallOrder: WaterfallBucket[] = ["essentials", "savings", "goals", "flexible"];
+
+export function allocateWaterfall(income: number, plan: WaterfallPlan): WaterfallResult {
+  const allocated: Record<WaterfallBucket, number> = {
+    essentials: 0,
+    savings: 0,
+    goals: 0,
+    flexible: 0,
+  };
+  const shortfall: Record<WaterfallBucket, number> = {
+    essentials: 0,
+    savings: 0,
+    goals: 0,
+    flexible: 0,
+  };
+  let remaining = income;
+  for (const bucket of waterfallOrder) {
+    const need = plan[bucket];
+    const give = Math.max(0, Math.min(remaining, need));
+    allocated[bucket] = give;
+    shortfall[bucket] = need - give;
+    remaining -= give;
+  }
+  return { allocated, buffer: Math.max(0, remaining), shortfall };
+}

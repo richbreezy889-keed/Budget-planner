@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bills, categories, goals, incomeEntries, transactions } from "./mockData";
 import type { Category, Goal, RecurringBill } from "./types";
 import {
+  allocateWaterfall,
   categoryWeeklyPlanned,
   goalWeeklyContributionAsOf,
   incomeInWeek,
@@ -220,5 +221,43 @@ describe("goalWeeklyContributionAsOf", () => {
     const lisbon = goals.find((g) => g.id === "g1");
     if (!lisbon) throw new Error("missing goal");
     expect(goalWeeklyContributionAsOf(lisbon, "2026-09-28")).toBeCloseTo(680 / 27, 6);
+  });
+});
+
+describe("allocateWaterfall", () => {
+  const plan = { essentials: 500, savings: 100, goals: 80, flexible: 60 };
+
+  it("allocates nothing and reports a full shortfall at zero income", () => {
+    const result = allocateWaterfall(0, plan);
+    expect(result.allocated).toEqual({ essentials: 0, savings: 0, goals: 0, flexible: 0 });
+    expect(result.buffer).toBeCloseTo(0, 6);
+    expect(result.shortfall).toEqual({ essentials: 500, savings: 100, goals: 80, flexible: 60 });
+  });
+
+  it("fills essentials first when income is below essentials", () => {
+    const result = allocateWaterfall(300, plan);
+    expect(result.allocated).toEqual({ essentials: 300, savings: 0, goals: 0, flexible: 0 });
+    expect(result.buffer).toBeCloseTo(0, 6);
+    expect(result.shortfall).toEqual({ essentials: 200, savings: 100, goals: 80, flexible: 60 });
+  });
+
+  it("flows into the next bucket in order", () => {
+    const result = allocateWaterfall(550, plan);
+    expect(result.allocated).toEqual({ essentials: 500, savings: 50, goals: 0, flexible: 0 });
+    expect(result.shortfall).toEqual({ essentials: 0, savings: 50, goals: 80, flexible: 60 });
+  });
+
+  it("meets the plan exactly with nothing left over", () => {
+    const result = allocateWaterfall(740, plan);
+    expect(result.allocated).toEqual(plan);
+    expect(result.buffer).toBeCloseTo(0, 6);
+    expect(result.shortfall).toEqual({ essentials: 0, savings: 0, goals: 0, flexible: 0 });
+  });
+
+  it("sends income above the plan to the buffer", () => {
+    const result = allocateWaterfall(900, plan);
+    expect(result.allocated).toEqual(plan);
+    expect(result.buffer).toBeCloseTo(160, 6);
+    expect(result.shortfall).toEqual({ essentials: 0, savings: 0, goals: 0, flexible: 0 });
   });
 });
