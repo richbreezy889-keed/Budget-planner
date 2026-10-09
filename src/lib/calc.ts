@@ -208,3 +208,15 @@ export function spentInWeek(
     .filter((transaction) => categoryIds === null || categoryIds.includes(transaction.categoryId))
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 }
+
+function daysBetween(from: ISODate, to: ISODate): number {
+  const ms = parseLocalDate(to).getTime() - parseLocalDate(from).getTime();
+  return Math.round(ms / 86400000);
+}
+
+export function goalWeeklyContributionAsOf(goal: Goal, today: ISODate): number {
+  if (!goal.targetDate) return 0;
+  const remaining = Math.max(0, goal.targetAmount - goal.savedAmount);
+  const weeksLeft = Math.max(1, Math.ceil(daysBetween(today, goal.targetDate) / 7));
+  return remaining / weeksLeft;
+}

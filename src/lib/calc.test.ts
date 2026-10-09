@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { bills, categories, incomeEntries, transactions } from "./mockData";
-import type { Category, RecurringBill } from "./types";
+import { bills, categories, goals, incomeEntries, transactions } from "./mockData";
+import type { Category, Goal, RecurringBill } from "./types";
 import {
   categoryWeeklyPlanned,
+  goalWeeklyContributionAsOf,
   incomeInWeek,
   spentInWeek,
   weekEnd,
@@ -157,5 +158,67 @@ describe("incomeInWeek / spentInWeek", () => {
     expect(spentInWeek(transactions, ["groceries"], "2026-09-28")).toBeCloseTo(74.9, 6);
     expect(spentInWeek(transactions, ["groceries", "coffee"], "2026-09-28")).toBeCloseTo(92.4, 6);
     expect(spentInWeek(transactions, [], "2026-09-28")).toBeCloseTo(0, 6);
+  });
+});
+
+describe("goalWeeklyContributionAsOf", () => {
+  it("returns 0 when the goal has no target date", () => {
+    const goal: Goal = { id: "x", name: "X", targetAmount: 100, savedAmount: 0 };
+    expect(goalWeeklyContributionAsOf(goal, "2026-09-28")).toBe(0);
+  });
+
+  it("returns 0 when the goal is already fully funded", () => {
+    const goal: Goal = {
+      id: "x",
+      name: "X",
+      targetAmount: 100,
+      savedAmount: 120,
+      targetDate: "2027-01-01",
+    };
+    expect(goalWeeklyContributionAsOf(goal, "2026-09-28")).toBe(0);
+  });
+
+  it("spreads the remaining amount over the whole weeks left", () => {
+    const oneWeek: Goal = {
+      id: "x",
+      name: "X",
+      targetAmount: 700,
+      savedAmount: 0,
+      targetDate: "2026-10-05",
+    };
+    const twoWeeks: Goal = {
+      id: "x",
+      name: "X",
+      targetAmount: 700,
+      savedAmount: 0,
+      targetDate: "2026-10-12",
+    };
+    expect(goalWeeklyContributionAsOf(oneWeek, "2026-09-28")).toBeCloseTo(700, 6);
+    expect(goalWeeklyContributionAsOf(twoWeeks, "2026-09-28")).toBeCloseTo(350, 6);
+  });
+
+  it("rounds partial weeks up and never uses fewer than one week", () => {
+    const partial: Goal = {
+      id: "x",
+      name: "X",
+      targetAmount: 700,
+      savedAmount: 0,
+      targetDate: "2026-10-06",
+    };
+    const past: Goal = {
+      id: "x",
+      name: "X",
+      targetAmount: 700,
+      savedAmount: 0,
+      targetDate: "2026-09-01",
+    };
+    expect(goalWeeklyContributionAsOf(partial, "2026-09-28")).toBeCloseTo(350, 6);
+    expect(goalWeeklyContributionAsOf(past, "2026-09-28")).toBeCloseTo(700, 6);
+  });
+
+  it("matches the mock Lisbon goal", () => {
+    const lisbon = goals.find((g) => g.id === "g1");
+    if (!lisbon) throw new Error("missing goal");
+    expect(goalWeeklyContributionAsOf(lisbon, "2026-09-28")).toBeCloseTo(680 / 27, 6);
   });
 });
