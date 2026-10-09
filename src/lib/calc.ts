@@ -292,3 +292,29 @@ export function runwayWeeksFromEssentials(buffer: number, essentials: number): n
   if (buffer <= 0) return 0;
   return buffer / essentials;
 }
+
+function weekStartRelativeTo(entryDate: ISODate, referenceWeekStart: ISODate): ISODate {
+  const reference = parseLocalDate(referenceWeekStart);
+  const diff = Math.round((parseLocalDate(entryDate).getTime() - reference.getTime()) / 86400000);
+  return toISODate(addDays(reference, Math.floor(diff / 7) * 7));
+}
+
+export function rollingAverageIncomeAsOf(
+  entries: IncomeEntry[],
+  weeks: number,
+  asOfWeekStart: ISODate,
+): number | null {
+  if (weeks <= 0 || entries.length === 0) return null;
+  const firstEntryWeek = entries
+    .map((entry) => weekStartRelativeTo(entry.date, asOfWeekStart))
+    .reduce((min, week) => (week < min ? week : min));
+  const reference = parseLocalDate(asOfWeekStart);
+  const available: ISODate[] = [];
+  for (let k = 1; k <= weeks; k++) {
+    const start = toISODate(addDays(reference, -7 * k));
+    if (start >= firstEntryWeek) available.push(start);
+  }
+  if (available.length === 0) return null;
+  const total = available.reduce((sum, start) => sum + incomeInWeek(entries, start), 0);
+  return total / available.length;
+}

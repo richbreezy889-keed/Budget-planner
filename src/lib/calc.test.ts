@@ -8,6 +8,7 @@ import {
   categoryWeeklyPlanned,
   goalWeeklyContributionAsOf,
   incomeInWeek,
+  rollingAverageIncomeAsOf,
   runwayWeeksFromEssentials,
   spentInWeek,
   weekEnd,
@@ -320,5 +321,32 @@ describe("runwayWeeksFromEssentials", () => {
     const buffer = bufferBalanceAsOf(2400, incomeEntries, transactions, "2026-10-05");
     const essentials = weeklyEssentials(categories, bills);
     expect(runwayWeeksFromEssentials(buffer, essentials)).toBeCloseTo(2987.1 / 532.3077, 4);
+  });
+});
+
+describe("rollingAverageIncomeAsOf", () => {
+  const entries: IncomeEntry[] = [
+    { id: "e1", date: "2026-09-09", amount: 100, source: "s", note: "" },
+    { id: "e2", date: "2026-09-23", amount: 250, source: "s", note: "" },
+    { id: "e3", date: "2026-09-30", amount: 75, source: "s", note: "" },
+  ];
+
+  it("averages only completed weeks", () => {
+    expect(rollingAverageIncomeAsOf(entries, 2, "2026-10-05")).toBeCloseTo(162.5, 6);
+    expect(rollingAverageIncomeAsOf(entries, 1, "2026-10-05")).toBeCloseTo(75, 6);
+  });
+
+  it("counts completed weeks with no income as zero", () => {
+    expect(rollingAverageIncomeAsOf(entries, 4, "2026-10-05")).toBeCloseTo(106.25, 6);
+  });
+
+  it("ignores weeks before the first income entry", () => {
+    expect(rollingAverageIncomeAsOf(entries, 6, "2026-10-05")).toBeCloseTo(106.25, 6);
+    expect(rollingAverageIncomeAsOf(entries, 4, "2026-09-28")).toBeCloseTo(350 / 3, 6);
+  });
+
+  it("returns null when no completed week has an entry or history", () => {
+    expect(rollingAverageIncomeAsOf([], 4, "2026-10-05")).toBeNull();
+    expect(rollingAverageIncomeAsOf(entries, 4, "2026-09-07")).toBeNull();
   });
 });
