@@ -36,6 +36,11 @@
   --color-warn: var(--warn);
   --color-danger: var(--danger);
   --color-sky: var(--sky);
+  --color-essentials: var(--essentials);
+  --color-savings: var(--savings);
+  --color-goals: var(--goals);
+  --color-flexible: var(--flexible);
+  --color-buffer: var(--buffer);
 }
 
 :root {
@@ -63,6 +68,11 @@
   --warn: oklch(0.74 0.15 75);
   --danger: oklch(0.6 0.2 25);
   --sky: oklch(0.72 0.12 230);
+  --essentials: oklch(0.6 0.14 250);
+  --savings: oklch(0.62 0.13 160);
+  --goals: oklch(0.58 0.17 305);
+  --flexible: oklch(0.7 0.15 62);
+  --buffer: oklch(0.62 0.16 355);
   --glow-a: oklch(0.69 0.15 163 / 0.18);
   --glow-b: oklch(0.72 0.12 230 / 0.12);
 }
@@ -83,6 +93,11 @@
   --border: oklch(1 0 0 / 0.09);
   --input: oklch(1 0 0 / 0.12);
   --safe: oklch(0.72 0.16 160);
+  --essentials: oklch(0.7 0.14 250);
+  --savings: oklch(0.72 0.14 160);
+  --goals: oklch(0.7 0.16 305);
+  --flexible: oklch(0.78 0.15 62);
+  --buffer: oklch(0.72 0.16 355);
   --glow-a: oklch(0.69 0.15 163 / 0.28);
   --glow-b: oklch(0.72 0.12 230 / 0.16);
 }
