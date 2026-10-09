@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { bills, categories, goals, incomeEntries, transactions } from "./mockData";
-import type { Category, Goal, RecurringBill } from "./types";
+import type { Category, Goal, IncomeEntry, RecurringBill, Transaction } from "./types";
 import {
   allocateWaterfall,
+  bufferBalanceAsOf,
+  bufferChangeInWeek,
   categoryWeeklyPlanned,
   goalWeeklyContributionAsOf,
   incomeInWeek,
@@ -259,5 +261,40 @@ describe("allocateWaterfall", () => {
     expect(result.allocated).toEqual(plan);
     expect(result.buffer).toBeCloseTo(160, 6);
     expect(result.shortfall).toEqual({ essentials: 0, savings: 0, goals: 0, flexible: 0 });
+  });
+});
+
+describe("bufferBalanceAsOf", () => {
+  it("returns the opening balance before any completed week", () => {
+    expect(bufferBalanceAsOf(2400, incomeEntries, transactions, "2026-09-28")).toBeCloseTo(2400, 6);
+  });
+
+  it("adds income and removes spending from completed weeks only", () => {
+    expect(bufferBalanceAsOf(2400, incomeEntries, transactions, "2026-10-05")).toBeCloseTo(
+      2987.1,
+      6,
+    );
+  });
+
+  it("excludes entries dated on the as-of week itself", () => {
+    const income: IncomeEntry[] = [
+      { id: "a", date: "2026-09-01", amount: 50, source: "s", note: "" },
+      { id: "b", date: "2026-10-05", amount: 200, source: "s", note: "" },
+    ];
+    const txs: Transaction[] = [
+      { id: "a", date: "2026-09-02", amount: 30, categoryId: "groceries", note: "" },
+      { id: "b", date: "2026-10-06", amount: 40, categoryId: "fun", note: "" },
+    ];
+    expect(bufferBalanceAsOf(100, income, txs, "2026-10-05")).toBeCloseTo(120, 6);
+  });
+});
+
+describe("bufferChangeInWeek", () => {
+  it("reports income minus spending for the current week", () => {
+    expect(bufferChangeInWeek(incomeEntries, transactions, "2026-09-28")).toBeCloseTo(587.1, 6);
+  });
+
+  it("reports zero for a week with no activity", () => {
+    expect(bufferChangeInWeek(incomeEntries, transactions, "2026-09-21")).toBeCloseTo(0, 6);
   });
 });

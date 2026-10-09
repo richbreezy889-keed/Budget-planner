@@ -261,3 +261,28 @@ export function allocateWaterfall(income: number, plan: WaterfallPlan): Waterfal
   }
   return { allocated, buffer: Math.max(0, remaining), shortfall };
 }
+
+export function bufferBalanceAsOf(
+  openingBalance: number,
+  incomeEntries: IncomeEntry[],
+  transactions: Transaction[],
+  asOfWeekStart: ISODate,
+): number {
+  const incomeBefore = incomeEntries
+    .filter((entry) => entry.date < asOfWeekStart)
+    .reduce((sum, entry) => sum + entry.amount, 0);
+  const spentBefore = transactions
+    .filter((transaction) => transaction.date < asOfWeekStart)
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+  return openingBalance + incomeBefore - spentBefore;
+}
+
+export function bufferChangeInWeek(
+  incomeEntries: IncomeEntry[],
+  transactions: Transaction[],
+  weekStartDate: ISODate,
+): number {
+  return (
+    incomeInWeek(incomeEntries, weekStartDate) - spentInWeek(transactions, null, weekStartDate)
+  );
+}
