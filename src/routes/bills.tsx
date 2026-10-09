@@ -14,12 +14,12 @@ import {
 export const Route = createFileRoute("/bills")({
   head: () => ({
     meta: [
-      { title: "Bills & Goals — Tidewell" },
+      { title: "Bills & Goals — MNGS" },
       {
         name: "description",
         content: "Recurring bills with weekly equivalents and savings goal progress.",
       },
-      { property: "og:title", content: "Bills & Goals — Tidewell" },
+      { property: "og:title", content: "Bills & Goals — MNGS" },
       { property: "og:description", content: "Recurring bills and savings goals at a glance." },
     ],
   }),

@@ -7,12 +7,12 @@ import { formatMoney } from "@/lib/format";
 export const Route = createFileRoute("/trends")({
   head: () => ({
     meta: [
-      { title: "Trends — Tidewell" },
+      { title: "Trends — MNGS" },
       {
         name: "description",
         content: "Twelve weeks of income versus spending and a monthly rollup.",
       },
-      { property: "og:title", content: "Trends — Tidewell" },
+      { property: "og:title", content: "Trends — MNGS" },
       { property: "og:description", content: "Income vs spending over time." },
     ],
   }),

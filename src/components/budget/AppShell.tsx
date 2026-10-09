@@ -17,10 +17,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="glow-pulse grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-primary font-display text-lg font-extrabold text-primary-foreground">
-              T
+              M
             </div>
             <div className="min-w-0">
-              <div className="font-display font-bold leading-none tracking-tight">Tidewell</div>
+              <div className="font-display font-bold leading-none tracking-tight">MNGS</div>
               <div className="mt-1 truncate text-[11px] text-muted-foreground">
                 Week {currentWeek.number} · {range}
               </div>

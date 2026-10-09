@@ -8,12 +8,12 @@ import { categoryProgress, spentInCategory, weeklyTotalForType } from "@/lib/cal
 export const Route = createFileRoute("/budgets")({
   head: () => ({
     meta: [
-      { title: "Budgets — Tidewell" },
+      { title: "Budgets — MNGS" },
       {
         name: "description",
         content: "Essential, savings and flexible budget categories with progress.",
       },
-      { property: "og:title", content: "Budgets — Tidewell" },
+      { property: "og:title", content: "Budgets — MNGS" },
       {
         property: "og:description",
         content: "Category budgets grouped by Essential, Savings and Flexible.",

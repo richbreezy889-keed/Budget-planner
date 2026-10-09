@@ -79,9 +79,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Tidewell — Weekly budget planner" },
+      { title: "MNGS — Weekly budget planner" },
       { name: "description", content: "A calm weekly budget planner for variable income." },
-      { property: "og:title", content: "Tidewell — Weekly budget planner" },
+      { property: "og:title", content: "MNGS — Weekly budget planner" },
       { property: "og:description", content: "A calm weekly budget planner for variable income." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

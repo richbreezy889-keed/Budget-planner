@@ -43,7 +43,7 @@ describe("App routing", () => {
   it("renders the index route", async () => {
     const doc = await renderAt("/");
 
-    expect(doc.title).toBe("This Week — Tidewell");
+    expect(doc.title).toBe("This Week — MNGS");
     expect(doc.body.textContent).toContain("Safe to spend this week");
     expect(doc.body.textContent).toContain("Income logged");
   });
@@ -51,7 +51,7 @@ describe("App routing", () => {
   it("renders the buffer route", async () => {
     const doc = await renderAt("/buffer");
 
-    expect(doc.title).toBe("Buffer & Runway — Tidewell");
+    expect(doc.title).toBe("Buffer & Runway — MNGS");
     expect(doc.body.textContent).toContain("Buffer balance");
     expect(doc.body.textContent).toContain("Runway");
   });
@@ -61,7 +61,7 @@ describe("App routing", () => {
     const doc = await renderAt("/this-route-does-not-exist");
 
     // No route matched, so the root route's default title stays in place.
-    expect(doc.title).toBe("Tidewell — Weekly budget planner");
+    expect(doc.title).toBe("MNGS — Weekly budget planner");
     expect(doc.body.textContent).toContain("404");
     expect(doc.body.textContent).toContain("Page not found");
     expect(doc.querySelector("h1")?.textContent).toBe("404");

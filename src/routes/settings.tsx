@@ -6,12 +6,12 @@ import { settings } from "@/lib/mockData";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — Tidewell" },
+      { title: "Settings — MNGS" },
       {
         name: "description",
         content: "Currency, week start, baseline income, opening buffer and data tools.",
       },
-      { property: "og:title", content: "Settings — Tidewell" },
+      { property: "og:title", content: "Settings — MNGS" },
       { property: "og:description", content: "Configure your weekly planner." },
     ],
   }),

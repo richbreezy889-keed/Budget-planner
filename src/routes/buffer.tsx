@@ -8,12 +8,12 @@ import { incomeEntries, settings, transactions } from "@/lib/mockData";
 export const Route = createFileRoute("/buffer")({
   head: () => ({
     meta: [
-      { title: "Buffer & Runway — Tidewell" },
+      { title: "Buffer & Runway — MNGS" },
       {
         name: "description",
         content: "Buffer balance, runway in weeks and 12 weeks of income against your baseline.",
       },
-      { property: "og:title", content: "Buffer & Runway — Tidewell" },
+      { property: "og:title", content: "Buffer & Runway — MNGS" },
       { property: "og:description", content: "How long your buffer can carry lean weeks." },
     ],
   }),
