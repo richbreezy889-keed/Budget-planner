@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { weekEnd, weekStart, weeklyEquivalent } from "./calc";
+import { bills, categories } from "./mockData";
+import type { Category, RecurringBill } from "./types";
+import { categoryWeeklyPlanned, weekEnd, weekStart, weeklyEquivalent } from "./calc";
+
+const cat = (id: string): Category => {
+  const found = categories.find((c) => c.id === id);
+  if (!found) throw new Error(`missing category ${id}`);
+  return found;
+};
 
 describe("weeklyEquivalent", () => {
   it("returns weekly amounts unchanged", () => {
@@ -55,5 +63,36 @@ describe("weekStart / weekEnd", () => {
     // A Monday stays the start of its own week regardless of local offset.
     expect(weekStart("2026-09-28", "Monday")).toBe("2026-09-28");
     expect(weekEnd("2026-09-28", "Monday")).toBe("2026-10-04");
+  });
+});
+
+describe("categoryWeeklyPlanned", () => {
+  it("uses the category budget when no bill links to it", () => {
+    expect(categoryWeeklyPlanned(cat("groceries"), bills)).toBeCloseTo(110, 4);
+    expect(categoryWeeklyPlanned(cat("transport"), bills)).toBeCloseTo(45, 4);
+    expect(categoryWeeklyPlanned(cat("dining"), bills)).toBeCloseTo(60, 4);
+    expect(categoryWeeklyPlanned(cat("emergency"), bills)).toBeCloseTo(60, 4);
+    expect(categoryWeeklyPlanned(cat("retirement"), bills)).toBeCloseTo(69.2308, 4);
+  });
+
+  it("sums linked bills' weekly equivalents and ignores the category budget", () => {
+    expect(categoryWeeklyPlanned(cat("utilities"), bills)).toBeCloseTo(42.6923, 4);
+    expect(categoryWeeklyPlanned(cat("fun"), bills)).toBeCloseTo(12, 4);
+    expect(categoryWeeklyPlanned(cat("rent"), bills)).toBeCloseTo(334.6154, 4);
+  });
+
+  it("counts each linked bill exactly once", () => {
+    const custom: Category = {
+      id: "test",
+      name: "Test",
+      type: "flexible",
+      budgetAmount: 999,
+      budgetPeriod: "weekly",
+    };
+    const linked: RecurringBill[] = [
+      { id: "x1", name: "X1", amount: 10, period: "weekly", categoryId: "test", dueDay: "Monday" },
+      { id: "x2", name: "X2", amount: 20, period: "weekly", categoryId: "test", dueDay: "Monday" },
+    ];
+    expect(categoryWeeklyPlanned(custom, linked)).toBeCloseTo(30, 6);
   });
 });

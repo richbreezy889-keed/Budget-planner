@@ -158,3 +158,11 @@ export function weekStart(date: ISODate, weekStartDay: WeekStartDay): ISODate {
 export function weekEnd(date: ISODate, weekStartDay: WeekStartDay): ISODate {
   return toISODate(addDays(parseLocalDate(weekStart(date, weekStartDay)), 6));
 }
+
+export function categoryWeeklyPlanned(category: Category, bills: RecurringBill[]): number {
+  const linked = bills.filter((bill) => bill.categoryId === category.id);
+  if (linked.length > 0) {
+    return linked.reduce((sum, bill) => sum + weeklyEquivalent(bill.amount, bill.period), 0);
+  }
+  return weeklyEquivalent(category.budgetAmount, category.budgetPeriod);
+}
