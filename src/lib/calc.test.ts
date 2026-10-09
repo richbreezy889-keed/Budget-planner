@@ -17,6 +17,7 @@ import {
   categoryWeeklyPlanned,
   goalWeeklyContributionAsOf,
   incomeInWeek,
+  monthlyRollup,
   rollingAverageIncomeAsOf,
   runwayWeeksFromEssentials,
   safeToSpendAmount,
@@ -29,6 +30,7 @@ import {
   weeklyEssentials,
   weeklyEquivalent,
   weeklyPlannedByType,
+  weeklySeries,
 } from "./calc";
 
 const cat = (id: string): Category => {
@@ -260,6 +262,54 @@ describe("categoryProgress", () => {
     expect(categoryProgress(Number.NaN, 100)).toBe(0);
     expect(Number.isFinite(categoryProgress(50, Number.POSITIVE_INFINITY))).toBe(true);
     expect(categoryProgress(50, Number.POSITIVE_INFINITY)).toBe(0);
+  });
+});
+
+describe("weeklySeries", () => {
+  it("returns N weeks oldest to newest including the current week", () => {
+    const series = weeklySeries(incomeEntries, transactions, 2, "2026-09-28", true);
+    expect(series).toHaveLength(2);
+    expect(series[0]).toEqual({ weekStart: "2026-09-21", income: 0, spending: 0 });
+    expect(series[1]?.weekStart).toBe("2026-09-28");
+    expect(series[1]?.income).toBeCloseTo(825, 6);
+    expect(series[1]?.spending).toBeCloseTo(237.9, 6);
+  });
+
+  it("excludes the current week when asked", () => {
+    const series = weeklySeries(incomeEntries, transactions, 3, "2026-09-28", false);
+    expect(series.map((point) => point.weekStart)).toEqual([
+      "2026-09-07",
+      "2026-09-14",
+      "2026-09-21",
+    ]);
+    expect(series.every((point) => point.income === 0 && point.spending === 0)).toBe(true);
+  });
+
+  it("returns a single current-week point", () => {
+    const series = weeklySeries(incomeEntries, transactions, 1, "2026-09-28", true);
+    expect(series).toEqual([{ weekStart: "2026-09-28", income: 825, spending: 237.9 }]);
+  });
+});
+
+describe("monthlyRollup", () => {
+  it("returns N months oldest to newest including the current month", () => {
+    const rollup = monthlyRollup(incomeEntries, transactions, 3, "2026-10-05");
+    expect(rollup).toEqual([
+      { month: "2026-08", income: 0, spending: 0, net: 0 },
+      { month: "2026-09", income: 825, spending: 125.9, net: 699.1 },
+      { month: "2026-10", income: 0, spending: 112, net: -112 },
+    ]);
+  });
+
+  it("returns a single current-month point", () => {
+    expect(monthlyRollup(incomeEntries, transactions, 1, "2026-09-15")).toEqual([
+      { month: "2026-09", income: 825, spending: 125.9, net: 699.1 },
+    ]);
+  });
+
+  it("rolls back across a year boundary", () => {
+    const rollup = monthlyRollup([], [], 3, "2026-01-15");
+    expect(rollup.map((point) => point.month)).toEqual(["2025-11", "2025-12", "2026-01"]);
   });
 });
 

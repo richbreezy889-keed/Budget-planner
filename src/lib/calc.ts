@@ -221,6 +221,61 @@ export function spentInWeek(
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 }
 
+export interface WeeklySeriesPoint {
+  weekStart: ISODate;
+  income: number;
+  spending: number;
+}
+
+export function weeklySeries(
+  entries: IncomeEntry[],
+  transactions: Transaction[],
+  weeks: number,
+  asOfWeekStart: ISODate,
+  includeCurrentWeek = true,
+): WeeklySeriesPoint[] {
+  const points: WeeklySeriesPoint[] = [];
+  for (let i = weeks - 1; i >= 0; i -= 1) {
+    const offset = includeCurrentWeek ? i : i + 1;
+    const start = toISODate(addDays(parseLocalDate(asOfWeekStart), -7 * offset));
+    points.push({
+      weekStart: start,
+      income: incomeInWeek(entries, start),
+      spending: spentInWeek(transactions, null, start),
+    });
+  }
+  return points;
+}
+
+export interface MonthlyRollupPoint {
+  month: string;
+  income: number;
+  spending: number;
+  net: number;
+}
+
+export function monthlyRollup(
+  entries: IncomeEntry[],
+  transactions: Transaction[],
+  months: number,
+  asOfDate: ISODate,
+): MonthlyRollupPoint[] {
+  const reference = parseLocalDate(`${asOfDate.slice(0, 7)}-01`);
+  const points: MonthlyRollupPoint[] = [];
+  for (let i = months - 1; i >= 0; i -= 1) {
+    const d = new Date(reference.getFullYear(), reference.getMonth() - i, 1);
+    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const income = entries
+      .filter((entry) => entry.date.slice(0, 7) === month)
+      .reduce((sum, entry) => sum + entry.amount, 0);
+    const spending = transactions
+      .filter((transaction) => transaction.date.slice(0, 7) === month)
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+    points.push({ month, income, spending, net: income - spending });
+  }
+  return points;
+}
+
 function daysBetween(from: ISODate, to: ISODate): number {
   const ms = parseLocalDate(to).getTime() - parseLocalDate(from).getTime();
   return Math.round(ms / 86400000);
