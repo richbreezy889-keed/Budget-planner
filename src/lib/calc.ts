@@ -139,7 +139,12 @@ export function spentInCategory(
 }
 
 export function categoryProgress(spent: number, budgetAmount: number): number {
-  return Math.min(1, spent / budgetAmount);
+  if (Number.isNaN(budgetAmount) || budgetAmount <= 0) {
+    return spent > 0 ? 1 : 0;
+  }
+  const ratio = spent / budgetAmount;
+  if (!Number.isFinite(ratio)) return 0;
+  return Math.min(1, ratio);
 }
 
 export function weeklyTotalForType(type: CategoryType, _categories: Category[]): number {

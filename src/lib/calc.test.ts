@@ -13,6 +13,7 @@ import {
   allocateWaterfall,
   bufferBalanceAsOf,
   bufferChangeInWeek,
+  categoryProgress,
   categoryWeeklyPlanned,
   goalWeeklyContributionAsOf,
   incomeInWeek,
@@ -235,6 +236,30 @@ describe("spentInCategory", () => {
   it("returns zero for empty or unmatched input", () => {
     expect(spentInCategory("groceries", [], "weekly", "2026-09-30")).toBe(0);
     expect(spentInCategory("rent", transactions, "weekly", "2026-09-30")).toBe(0);
+  });
+});
+
+describe("categoryProgress", () => {
+  it("returns the spent-over-budget ratio clamped to one", () => {
+    expect(categoryProgress(50, 100)).toBeCloseTo(0.5, 6);
+    expect(categoryProgress(100, 100)).toBeCloseTo(1, 6);
+    expect(categoryProgress(150, 100)).toBeCloseTo(1, 6);
+    expect(categoryProgress(0, 100)).toBeCloseTo(0, 6);
+  });
+
+  it("returns one when there is spend but no usable budget", () => {
+    expect(categoryProgress(5, 0)).toBe(1);
+    expect(categoryProgress(5, -10)).toBe(1);
+    expect(categoryProgress(0, 0)).toBe(0);
+    expect(categoryProgress(0, -10)).toBe(0);
+  });
+
+  it("never returns NaN or Infinity", () => {
+    expect(categoryProgress(50, Number.NaN)).toBe(1);
+    expect(categoryProgress(0, Number.NaN)).toBe(0);
+    expect(categoryProgress(Number.NaN, 100)).toBe(0);
+    expect(Number.isFinite(categoryProgress(50, Number.POSITIVE_INFINITY))).toBe(true);
+    expect(categoryProgress(50, Number.POSITIVE_INFINITY)).toBe(0);
   });
 });
 
