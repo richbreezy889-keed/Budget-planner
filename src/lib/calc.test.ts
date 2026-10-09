@@ -20,6 +20,7 @@ import {
   runwayWeeksFromEssentials,
   safeToSpendAmount,
   safeToSpendStatus,
+  spentInCategory,
   spentInWeek,
   suggestedBaseline,
   weekEnd,
@@ -196,6 +197,44 @@ describe("incomeInWeek / spentInWeek", () => {
     expect(spentInWeek(transactions, ["groceries"], "2026-09-28")).toBeCloseTo(74.9, 6);
     expect(spentInWeek(transactions, ["groceries", "coffee"], "2026-09-28")).toBeCloseTo(92.4, 6);
     expect(spentInWeek(transactions, [], "2026-09-28")).toBeCloseTo(0, 6);
+  });
+});
+
+describe("spentInCategory", () => {
+  it("sums a category's spend within the week containing asOfDate", () => {
+    expect(spentInCategory("groceries", transactions, "weekly", "2026-09-30")).toBeCloseTo(74.9, 6);
+    expect(spentInCategory("transport", transactions, "weekly", "2026-09-30")).toBeCloseTo(32, 6);
+    expect(spentInCategory("coffee", transactions, "weekly", "2026-10-01")).toBeCloseTo(17.5, 6);
+  });
+
+  it("sums a category's spend within the calendar month containing asOfDate", () => {
+    expect(spentInCategory("groceries", transactions, "monthly", "2026-09-15")).toBeCloseTo(
+      52.4,
+      6,
+    );
+    expect(spentInCategory("groceries", transactions, "monthly", "2026-10-15")).toBeCloseTo(
+      22.5,
+      6,
+    );
+  });
+
+  it("respects the configured week start day", () => {
+    const txns: Transaction[] = [
+      { id: "a", date: "2026-09-27", amount: 10, categoryId: "g", note: "" },
+      { id: "b", date: "2026-09-28", amount: 20, categoryId: "g", note: "" },
+    ];
+    expect(spentInCategory("g", txns, "weekly", "2026-09-28", "Monday")).toBeCloseTo(20, 6);
+    expect(spentInCategory("g", txns, "weekly", "2026-09-28", "Sunday")).toBeCloseTo(30, 6);
+  });
+
+  it("uses the latest transaction date when asOfDate is omitted", () => {
+    expect(spentInCategory("groceries", transactions, "weekly")).toBeCloseTo(74.9, 6);
+    expect(spentInCategory("groceries", transactions, "monthly")).toBeCloseTo(22.5, 6);
+  });
+
+  it("returns zero for empty or unmatched input", () => {
+    expect(spentInCategory("groceries", [], "weekly", "2026-09-30")).toBe(0);
+    expect(spentInCategory("rent", transactions, "weekly", "2026-09-30")).toBe(0);
   });
 });
 

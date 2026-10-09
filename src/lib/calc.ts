@@ -114,21 +114,28 @@ export function rollingAverageIncome(_entries: IncomeEntry[], weeks: number): nu
 
 export function spentInCategory(
   categoryId: string,
-  _transactions: Transaction[],
-  _period: Category["budgetPeriod"],
+  transactions: Transaction[],
+  period: Category["budgetPeriod"],
+  asOfDate?: ISODate,
+  weekStartDay: WeekStartDay = "Monday",
 ): number {
-  const mock: Record<string, number> = {
-    rent: 1450,
-    groceries: 74.9,
-    transport: 32,
-    utilities: 98,
-    emergency: 60,
-    retirement: 150,
-    dining: 41.5,
-    coffee: 17.5,
-    fun: 12,
-  };
-  return mock[categoryId] ?? 0;
+  if (transactions.length === 0) return 0;
+  const latest = transactions.reduce<ISODate>(
+    (max, transaction) => (transaction.date > max ? transaction.date : max),
+    transactions[0]?.date ?? "",
+  );
+  const reference = asOfDate ?? latest;
+  const scoped = transactions.filter((transaction) => transaction.categoryId === categoryId);
+  if (period === "weekly") {
+    const start = weekStart(reference, weekStartDay);
+    return scoped
+      .filter((transaction) => isInWeek(transaction.date, start))
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+  }
+  const month = reference.slice(0, 7);
+  return scoped
+    .filter((transaction) => transaction.date.slice(0, 7) === month)
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
 }
 
 export function categoryProgress(spent: number, budgetAmount: number): number {
