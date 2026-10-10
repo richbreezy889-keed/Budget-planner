@@ -259,6 +259,7 @@ export interface BudgetRow {
   categoryId: string;
   name: string;
   type: CategoryType;
+  budgetPeriod: BudgetPeriod;
   plannedWeekly: number;
   plannedInOwnPeriod: number;
   spentInOwnPeriod: number;
@@ -295,6 +296,7 @@ export function budgetsView(data: AppData, today: ISODate): BudgetsView {
         categoryId: category.id,
         name: category.name,
         type,
+        budgetPeriod: category.budgetPeriod,
         plannedWeekly,
         plannedInOwnPeriod,
         spentInOwnPeriod,

@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { MainSkeleton } from "@/components/budget/AppShell";
 import { PageHeader, Panel, Progress } from "@/components/budget/Panel";
-import { categories, settings, transactions } from "@/lib/mockData";
-import type { CategoryType } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
-import { categoryProgress, spentInCategory, weeklyTotalForType } from "@/lib/calc";
+import { budgetsView } from "@/lib/selectors";
+import { useAppView } from "@/lib/store/useAppView";
+import type { CategoryType } from "@/lib/types";
 
 export const Route = createFileRoute("/budgets")({
   head: () => ({
@@ -29,8 +30,12 @@ const groups: { type: CategoryType; label: string }[] = [
   { type: "flexible", label: "Flexible" },
 ];
 
-function BudgetsPage() {
-  const cur = settings.currency;
+export function BudgetsPage() {
+  const view = useAppView();
+  if (view === null) return <MainSkeleton />;
+  const currency = view.data.settings.currency;
+  const budgets = budgetsView(view.data, view.today);
+
   return (
     <div>
       <PageHeader
@@ -38,39 +43,60 @@ function BudgetsPage() {
         subtitle="Planned amounts per category, shown weekly or monthly."
       />
       <div className="flex flex-col gap-6">
-        {groups.map((g) => (
+        {groups.map((group) => (
           <Panel
-            key={g.type}
-            title={g.label}
+            key={group.type}
+            title={group.label}
             action={
               <span className="font-mono text-[12px] text-muted-foreground">
-                {formatMoney(weeklyTotalForType(g.type, categories), cur)}/week
+                {formatMoney(budgets.totals[group.type], currency)}/week
               </span>
             }
           >
             <ul className="flex flex-col gap-5">
-              {categories
-                .filter((c) => c.type === g.type)
-                .map((c) => {
-                  const spent = spentInCategory(c.id, transactions, c.budgetPeriod);
-                  const p = categoryProgress(spent, c.budgetAmount);
+              {budgets.rows
+                .filter((row) => row.type === group.type)
+                .map((row) => {
+                  const over = row.progress > 1;
+                  const tone = over ? "danger" : row.progress >= 0.8 ? "warn" : "safe";
                   return (
-                    <li key={c.id}>
-                      <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3">
+                    <li key={row.categoryId}>
+                      <div className="mb-2 flex items-baseline justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-2">
-                          <span className="truncate text-[14px]">{c.name}</span>
+                          <span className="truncate text-[14px]">{row.name}</span>
                           <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                            {c.budgetPeriod}
+                            {row.budgetPeriod}
                           </span>
                         </div>
-                        <span className="font-mono text-[13px]">
-                          {formatMoney(spent, cur)}{" "}
+                        <span className="text-right font-mono text-[13px]">
+                          {formatMoney(row.spentInOwnPeriod, currency)}{" "}
                           <span className="text-muted-foreground">
-                            / {formatMoney(c.budgetAmount, cur)}
+                            / {formatMoney(row.plannedInOwnPeriod, currency)}
                           </span>
+                          {row.budgetPeriod === "monthly" && (
+                            <span className="block text-[11px] text-muted-foreground">
+                              {formatMoney(row.plannedWeekly, currency)}/week
+                            </span>
+                          )}
                         </span>
                       </div>
-                      <Progress value={p} tone={p >= 1 ? "warn" : "primary"} />
+                      <Progress value={row.progress} tone={tone} />
+                      {over && (
+                        <div className="mt-1 text-[12px] text-danger">
+                          Over by {formatMoney(row.overBy, currency)}
+                        </div>
+                      )}
+                      {row.drivenByBills && (
+                        <div className="mt-1 text-[12px] text-muted-foreground">
+                          Includes {row.billCount} {row.billCount === 1 ? "bill" : "bills"}
+                        </div>
+                      )}
+                      {row.billsExceedBudget > 0 && (
+                        <div className="mt-1 text-[12px] text-warn">
+                          Bills exceed this budget by {formatMoney(row.billsExceedBudget, currency)}{" "}
+                          per week
+                        </div>
+                      )}
                     </li>
                   );
                 })}

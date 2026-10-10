@@ -49,9 +49,11 @@ export function Progress({
   tone = "primary",
 }: {
   value: number;
-  tone?: "primary" | "warn" | "danger";
+  tone?: "safe" | "primary" | "warn" | "danger";
 }) {
-  const bar = { primary: "bg-primary", warn: "bg-warn", danger: "bg-danger" }[tone];
+  const bar = { safe: "bg-safe", primary: "bg-primary", warn: "bg-warn", danger: "bg-danger" }[
+    tone
+  ];
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
       <div
