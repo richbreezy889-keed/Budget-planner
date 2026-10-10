@@ -174,6 +174,39 @@ describe("thisWeekView", () => {
     ]);
   });
 
+  it("orders same-date activity most recently added first (reverse of insertion)", () => {
+    const data = smallData();
+    data.incomeEntries.push({
+      id: "i4",
+      date: "2026-03-10",
+      amount: 40,
+      source: "Cash",
+      note: "Cashback",
+    });
+    data.transactions.push({
+      id: "t6",
+      date: "2026-03-10",
+      amount: 9,
+      categoryId: "c3",
+      note: "Coffee",
+    });
+    data.transactions.push({
+      id: "t7",
+      date: "2026-03-12",
+      amount: 12,
+      categoryId: "c2",
+      note: "Lunch",
+    });
+
+    const view = thisWeekView(data, "2026-03-09");
+
+    expect(view.activity.map((item) => item.id)).toEqual(["t7", "t4", "t6", "t5", "i4", "i3"]);
+    const groupOf = (date: string) =>
+      view.activity.filter((item) => item.date === date).map((item) => item.id);
+    expect(groupOf("2026-03-12")).toEqual(["t7", "t4"]);
+    expect(groupOf("2026-03-10")).toEqual(["t6", "t5", "i4"]);
+  });
+
   it("reports an empty week for blank data", () => {
     const view = thisWeekView(
       startFresh({

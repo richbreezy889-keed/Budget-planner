@@ -173,9 +173,12 @@ export function thisWeekView(data: AppData, today: ISODate): ThisWeekView {
       });
     }
   }
-  activity.sort((a, b) =>
-    a.date === b.date ? a.id.localeCompare(b.id) : a.date < b.date ? 1 : -1,
-  );
+  const sorted = activity
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) =>
+      a.item.date === b.item.date ? b.index - a.index : a.item.date < b.item.date ? 1 : -1,
+    )
+    .map(({ item }) => item);
 
   return {
     weekStart: start,
@@ -190,7 +193,7 @@ export function thisWeekView(data: AppData, today: ISODate): ThisWeekView {
     safeToSpend,
     status: safeToSpendStatus(safeToSpend, plan.flexible),
     flexibleShortfall: waterfall.shortfall.flexible,
-    activity,
+    activity: sorted,
   };
 }
 
