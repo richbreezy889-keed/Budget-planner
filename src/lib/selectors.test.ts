@@ -234,6 +234,93 @@ describe("thisWeekView", () => {
     expect(groupOf("2026-03-10")).toEqual(["t6", "t5", "i4"]);
   });
 
+  it("downgrades a safe status to caution on a lean week (income short of essentials)", () => {
+    const view = thisWeekView(smallData(), "2026-03-09");
+
+    expect(view.hasIncome).toBe(true);
+    expect(view.status).toBe("safe");
+    expect(view.waterfall.shortfall.essentials).toBeGreaterThan(0);
+    expect(view.displayStatus).toBe("caution");
+    expect(view.isLean).toBe(true);
+  });
+
+  it("keeps displayStatus safe when essentials are fully funded", () => {
+    const data = smallData();
+    data.incomeEntries.push({
+      id: "i4",
+      date: "2026-03-10",
+      amount: 500,
+      source: "Payroll",
+      note: "Bonus",
+    });
+
+    const view = thisWeekView(data, "2026-03-09");
+
+    expect(view.incomeLogged).toBeCloseTo(750, 6);
+    expect(view.waterfall.shortfall.essentials).toBe(0);
+    expect(view.status).toBe("safe");
+    expect(view.displayStatus).toBe("safe");
+    expect(view.isLean).toBe(false);
+  });
+
+  it("keeps a caution status when flexible is low but essentials are funded", () => {
+    const data = smallData();
+    data.incomeEntries.push({
+      id: "i4",
+      date: "2026-03-10",
+      amount: 700,
+      source: "Payroll",
+      note: "Bonus",
+    });
+    data.transactions.push({
+      id: "t6",
+      date: "2026-03-10",
+      amount: 40,
+      categoryId: "c3",
+      note: "Concert",
+    });
+
+    const view = thisWeekView(data, "2026-03-09");
+
+    expect(view.waterfall.shortfall.essentials).toBe(0);
+    expect(view.safeToSpend).toBe(5);
+    expect(view.status).toBe("caution");
+    expect(view.displayStatus).toBe("caution");
+    expect(view.isLean).toBe(false);
+  });
+
+  it("keeps a danger status even when essentials are short", () => {
+    const data = smallData();
+    data.transactions.push({
+      id: "t6",
+      date: "2026-03-10",
+      amount: 60,
+      categoryId: "c3",
+      note: "Spree",
+    });
+
+    const view = thisWeekView(data, "2026-03-09");
+
+    expect(view.waterfall.shortfall.essentials).toBeGreaterThan(0);
+    expect(view.safeToSpend).toBe(-15);
+    expect(view.status).toBe("danger");
+    expect(view.displayStatus).toBe("danger");
+    expect(view.isLean).toBe(false);
+  });
+
+  it("does not downgrade a safe status when there is no income yet", () => {
+    const data = smallData();
+    data.incomeEntries = [];
+
+    const view = thisWeekView(data, "2026-03-09");
+
+    expect(view.hasIncome).toBe(false);
+    expect(view.waterfall.shortfall.essentials).toBeGreaterThan(0);
+    expect(view.status).toBe("safe");
+    expect(view.displayStatus).toBe("safe");
+    expect(view.isLean).toBe(false);
+  });
+
   it("reports an empty week for blank data", () => {
     const view = thisWeekView(
       startFresh({

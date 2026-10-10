@@ -9,7 +9,8 @@ const statusMap = {
 };
 
 export function SafeToSpendCard({ week, currency }: { week: ThisWeekView; currency: string }) {
-  const s = statusMap[week.status];
+  const s = statusMap[week.displayStatus];
+  const statusText = week.isLean ? "Lean week" : s.text;
   return (
     <div className="glass relative overflow-hidden rounded-[20px] p-6 sm:p-7">
       <div className="relative flex flex-wrap items-start justify-between gap-6">
@@ -21,7 +22,7 @@ export function SafeToSpendCard({ week, currency }: { week: ThisWeekView; curren
           <div className="mt-3 flex items-center gap-2">
             <span className={cn("glow-pulse inline-block h-2 w-2 rounded-full", s.dot)} />
             <span className={cn("text-[13px]", s.label)}>
-              {s.text} · {formatMoney(week.safeToSpend, currency)} of{" "}
+              {statusText} · {formatMoney(week.safeToSpend, currency)} of{" "}
               {formatMoney(week.flexibleBudget, currency)} flexible left
             </span>
           </div>
@@ -32,7 +33,7 @@ export function SafeToSpendCard({ week, currency }: { week: ThisWeekView; curren
             {formatMoney(week.incomeLogged, currency)}
           </div>
           <div className="mt-1 text-[12px] text-muted-foreground">
-            {week.incomeEntryCount} entries this week
+            {week.incomeEntryCount} {week.incomeEntryCount === 1 ? "entry" : "entries"} this week
           </div>
         </div>
       </div>
