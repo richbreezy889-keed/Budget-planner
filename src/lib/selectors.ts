@@ -209,6 +209,7 @@ export interface BufferView {
   baseline: number;
   suggestedBaseline: number | null;
   avg4VsBaseline: "above" | "below" | "equal" | null;
+  avg8VsBaseline: "above" | "below" | "equal" | null;
   series: WeeklySeriesPoint[];
 }
 
@@ -226,8 +227,8 @@ export function bufferView(data: AppData, today: ISODate): BufferView {
   const avg8 = rollingAverageIncomeAsOf(data.incomeEntries, 8, start);
   const baseline = data.settings.baselineWeeklyIncome;
   const suggested = suggestedBaseline(data.incomeEntries, start);
-  const avg4VsBaseline: BufferView["avg4VsBaseline"] =
-    avg4 === null ? null : avg4 > baseline ? "above" : avg4 < baseline ? "below" : "equal";
+  const toVs = (average: number | null): BufferView["avg4VsBaseline"] =>
+    average === null ? null : average > baseline ? "above" : average < baseline ? "below" : "equal";
 
   return {
     bufferBalance,
@@ -238,7 +239,8 @@ export function bufferView(data: AppData, today: ISODate): BufferView {
     avg8,
     baseline,
     suggestedBaseline: suggested,
-    avg4VsBaseline,
+    avg4VsBaseline: toVs(avg4),
+    avg8VsBaseline: toVs(avg8),
     series: weeklySeries(data.incomeEntries, data.transactions, 12, start),
   };
 }

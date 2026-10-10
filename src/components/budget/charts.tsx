@@ -1,5 +1,8 @@
 import { format, parseISO } from "date-fns";
+import { weeklyHistory } from "@/lib/mockData";
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
   Legend,
   Line,
@@ -9,10 +12,15 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  Bar,
-  BarChart,
 } from "recharts";
-import { weeklyHistory, settings } from "@/lib/mockData";
+
+import type { ISODate } from "@/lib/types";
+
+export interface SeriesPoint {
+  weekStart: ISODate;
+  income: number;
+  spending: number;
+}
 
 const axis = {
   stroke: "var(--muted-foreground)",
@@ -29,9 +37,21 @@ const tip = {
   },
   labelStyle: { color: "var(--muted-foreground)" },
 };
-const data = weeklyHistory.map((w) => ({ ...w, label: format(parseISO(w.weekStart), "d MMM") }));
 
-export function IncomeLineChart() {
+function labelled(
+  series: SeriesPoint[],
+): { weekStart: ISODate; income: number; spending: number; label: string }[] {
+  return series.map((week, index) => ({
+    ...week,
+    label:
+      index === series.length - 1
+        ? `${format(parseISO(week.weekStart), "d MMM")} (so far)`
+        : format(parseISO(week.weekStart), "d MMM"),
+  }));
+}
+
+export function IncomeLineChart({ series, baseline }: { series: SeriesPoint[]; baseline: number }) {
+  const data = labelled(series);
   return (
     <div className="h-72 w-full">
       <ResponsiveContainer>
@@ -41,7 +61,7 @@ export function IncomeLineChart() {
           <YAxis {...axis} />
           <Tooltip {...tip} />
           <ReferenceLine
-            y={settings.baselineWeeklyIncome}
+            y={baseline}
             stroke="var(--warn)"
             strokeDasharray="6 5"
             label={{
@@ -65,6 +85,7 @@ export function IncomeLineChart() {
 }
 
 export function IncomeSpendChart() {
+  const data = labelled(weeklyHistory);
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer>

@@ -373,6 +373,7 @@ describe("bufferView", () => {
     expect(view.baseline).toBe(500);
     expect(view.suggestedBaseline).toBeNull();
     expect(view.avg4VsBaseline).toBe("below");
+    expect(view.avg8VsBaseline).toBe("below");
     expect(view.series).toHaveLength(12);
     expect(view.series[11]).toEqual({ weekStart: "2026-03-09", income: 250, spending: 25 });
     expect(view.series[10]).toEqual({ weekStart: "2026-03-02", income: 400, spending: 1360 });
@@ -386,6 +387,18 @@ describe("bufferView", () => {
     const equal = smallData();
     equal.settings.baselineWeeklyIncome = 400;
     expect(bufferView(equal, "2026-03-09").avg4VsBaseline).toBe("equal");
+  });
+
+  it("compares avg8 against the baseline", () => {
+    const above = smallData();
+    above.settings.baselineWeeklyIncome = 300;
+    expect(bufferView(above, "2026-03-09").avg8VsBaseline).toBe("above");
+
+    const equal = smallData();
+    equal.settings.baselineWeeklyIncome = 400;
+    expect(bufferView(equal, "2026-03-09").avg8VsBaseline).toBe("equal");
+
+    expect(bufferView(smallData(), "2026-03-09").avg8VsBaseline).toBe("below");
   });
 
   it("returns nulls when there is no history", () => {
@@ -407,6 +420,7 @@ describe("bufferView", () => {
     expect(view.avg8).toBeNull();
     expect(view.suggestedBaseline).toBeNull();
     expect(view.avg4VsBaseline).toBeNull();
+    expect(view.avg8VsBaseline).toBeNull();
     expect(view.series).toHaveLength(12);
   });
 
@@ -425,6 +439,7 @@ describe("bufferView", () => {
     expect(shiftedBuffer.baseline).toBe(originalBuffer.baseline);
     expect(shiftedBuffer.suggestedBaseline).toBe(originalBuffer.suggestedBaseline);
     expect(shiftedBuffer.avg4VsBaseline).toBe(originalBuffer.avg4VsBaseline);
+    expect(shiftedBuffer.avg8VsBaseline).toBe(originalBuffer.avg8VsBaseline);
     expect(shiftedBuffer.series.map((point) => [point.income, point.spending])).toEqual(
       originalBuffer.series.map((point) => [point.income, point.spending]),
     );

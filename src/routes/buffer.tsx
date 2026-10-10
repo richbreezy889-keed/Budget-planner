@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader, Panel, Stat } from "@/components/budget/Panel";
 import { IncomeLineChart } from "@/components/budget/charts";
+import { MainSkeleton } from "@/components/budget/AppShell";
+import { PageHeader, Panel, Stat } from "@/components/budget/Panel";
 import { formatMoney } from "@/lib/format";
-import { bufferBalance, bufferChangeThisWeek, rollingAverageIncome, runwayWeeks } from "@/lib/calc";
-import { incomeEntries, settings, transactions } from "@/lib/mockData";
+import { bufferView } from "@/lib/selectors";
+import { useAppView } from "@/lib/store/useAppView";
 
 export const Route = createFileRoute("/buffer")({
   head: () => ({
@@ -20,9 +21,19 @@ export const Route = createFileRoute("/buffer")({
   component: BufferPage,
 });
 
-function BufferPage() {
-  const cur = settings.currency;
-  const balance = bufferBalance(settings, incomeEntries, transactions);
+const vsBaseline = (vs: "above" | "below" | "equal" | null): string => {
+  if (vs === null) return "Not enough history yet";
+  if (vs === "above") return "Above baseline";
+  if (vs === "below") return "Below baseline";
+  return "On baseline";
+};
+
+export function BufferPage() {
+  const view = useAppView();
+  if (view === null) return <MainSkeleton />;
+  const currency = view.data.settings.currency;
+  const buffer = bufferView(view.data, view.today);
+
   return (
     <div>
       <PageHeader
@@ -32,30 +43,35 @@ function BufferPage() {
       <div className="grid gap-6 sm:grid-cols-2">
         <Stat
           label="Buffer balance"
-          value={formatMoney(balance, cur)}
-          hint={`${formatMoney(bufferChangeThisWeek(settings, incomeEntries), cur, { sign: true })} added this week`}
+          value={formatMoney(buffer.bufferBalance, currency)}
+          hint={`this week so far: ${formatMoney(buffer.changeThisWeek, currency, { sign: true })}`}
         />
         <Stat
           label="Runway"
-          value={`${runwayWeeks(balance, settings.baselineWeeklyIncome)} weeks`}
-          hint={`of baseline ${formatMoney(settings.baselineWeeklyIncome, cur)}/week`}
+          value={buffer.runwayWeeks === null ? "—" : `${buffer.runwayWeeks.toFixed(1)} weeks`}
+          {...(buffer.runwayWeeks === null ? { hint: "Add your essentials to see runway" } : {})}
         />
       </div>
       <Panel title="Weekly income · last 12 weeks" className="mt-6">
-        <IncomeLineChart />
+        <IncomeLineChart series={buffer.series} baseline={buffer.baseline} />
       </Panel>
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
         <Stat
           label="4-week average"
-          value={formatMoney(rollingAverageIncome(incomeEntries, 4), cur)}
-          hint="Above baseline"
+          value={buffer.avg4 === null ? "—" : formatMoney(buffer.avg4, currency)}
+          hint={vsBaseline(buffer.avg4VsBaseline)}
         />
         <Stat
           label="8-week average"
-          value={formatMoney(rollingAverageIncome(incomeEntries, 8), cur)}
-          hint="Above baseline"
+          value={buffer.avg8 === null ? "—" : formatMoney(buffer.avg8, currency)}
+          hint={vsBaseline(buffer.avg8VsBaseline)}
         />
       </div>
+      {buffer.suggestedBaseline !== null && (
+        <div className="mt-3 text-[12px] text-muted-foreground">
+          Suggested baseline: {formatMoney(buffer.suggestedBaseline, currency)}
+        </div>
+      )}
     </div>
   );
 }
