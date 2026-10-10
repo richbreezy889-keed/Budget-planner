@@ -1,5 +1,4 @@
 import { format, parseISO } from "date-fns";
-import { weeklyHistory } from "@/lib/mockData";
 import {
   Bar,
   BarChart,
@@ -84,8 +83,8 @@ export function IncomeLineChart({ series, baseline }: { series: SeriesPoint[]; b
   );
 }
 
-export function IncomeSpendChart() {
-  const data = labelled(weeklyHistory);
+export function IncomeSpendChart({ series }: { series: SeriesPoint[] }) {
+  const data = labelled(series);
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer>

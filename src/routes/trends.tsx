@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader, Panel } from "@/components/budget/Panel";
+import { format, parseISO } from "date-fns";
+import { MainSkeleton } from "@/components/budget/AppShell";
 import { IncomeSpendChart } from "@/components/budget/charts";
-import { monthlyRollup, settings } from "@/lib/mockData";
+import { PageHeader, Panel } from "@/components/budget/Panel";
 import { formatMoney } from "@/lib/format";
+import { trendsView } from "@/lib/selectors";
+import { useAppView } from "@/lib/store/useAppView";
 
 export const Route = createFileRoute("/trends")({
   head: () => ({
@@ -19,12 +22,17 @@ export const Route = createFileRoute("/trends")({
   component: TrendsPage,
 });
 
-function TrendsPage() {
+export function TrendsPage() {
+  const view = useAppView();
+  if (view === null) return <MainSkeleton />;
+  const currency = view.data.settings.currency;
+  const trends = trendsView(view.data, view.today);
+
   return (
     <div>
       <PageHeader title="Trends" subtitle="Income vs spending over the last 12 weeks." />
       <Panel title="Income vs spending">
-        <IncomeSpendChart />
+        <IncomeSpendChart series={trends.series} />
       </Panel>
       <Panel title="Monthly rollup" className="mt-6">
         <div className="-mx-2 overflow-x-auto">
@@ -38,17 +46,22 @@ function TrendsPage() {
               </tr>
             </thead>
             <tbody>
-              {monthlyRollup.map((m) => (
-                <tr key={m.month} className="border-t">
-                  <td className="px-2 py-3">{m.month}</td>
-                  <td className="px-2 py-3 text-right font-mono">
-                    {formatMoney(m.income, settings.currency)}
+              {trends.rollup.map((month, index) => (
+                <tr key={month.month} className="border-t">
+                  <td className="px-2 py-3">
+                    {format(parseISO(`${month.month}-01`), "MMM yyyy")}
+                    {index === trends.rollup.length - 1 ? " (so far)" : ""}
                   </td>
                   <td className="px-2 py-3 text-right font-mono">
-                    {formatMoney(m.spending, settings.currency)}
+                    {formatMoney(month.income, currency)}
                   </td>
-                  <td className="px-2 py-3 text-right font-mono text-safe">
-                    {formatMoney(m.saved, settings.currency, { sign: true })}
+                  <td className="px-2 py-3 text-right font-mono">
+                    {formatMoney(month.spending, currency)}
+                  </td>
+                  <td
+                    className={`px-2 py-3 text-right font-mono ${month.net >= 0 ? "text-safe" : "text-danger"}`}
+                  >
+                    {formatMoney(month.net, currency, { sign: true })}
                   </td>
                 </tr>
               ))}
