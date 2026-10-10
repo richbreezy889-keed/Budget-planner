@@ -12,7 +12,8 @@ import type { AppData } from "../types";
 import { AppDataContext, type AppDataContextValue, type StorageStatus } from "./context";
 import { appReducer, type AppAction } from "./reducer";
 import { createSeedData } from "./seed";
-import { localStorageAdapter, type StorageAdapter } from "./storage";
+import { STORAGE_KEY, localStorageAdapter, type StorageAdapter } from "./storage";
+import { importData } from "./validate";
 
 interface ProviderState {
   data: AppData;
@@ -104,6 +105,20 @@ export function AppDataProvider({
       window.removeEventListener("pagehide", handlePageHide);
     };
   }, [flush]);
+
+  // Adopt changes made by another tab without echoing them back (no ping-pong).
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY || event.newValue === null) return;
+      const result = importData(event.newValue);
+      if (!result.ok) return;
+      lastPersistedRef.current = result.data;
+      latestDataRef.current = result.data;
+      dispatch({ type: "replaceAll", data: result.data });
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   const value = useMemo<AppDataContextValue>(
     () => ({ data: state.data, dispatch, hydrated, error: state.error, storageStatus }),

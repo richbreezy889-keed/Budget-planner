@@ -7,7 +7,7 @@ import type { AppData } from "../types";
 import { AppDataProvider } from "./AppDataProvider";
 import { useAppData } from "./context";
 import { createSeedData } from "./seed";
-import type { LoadResult, SaveResult, StorageAdapter } from "./storage";
+import { STORAGE_KEY, type LoadResult, type SaveResult, type StorageAdapter } from "./storage";
 
 function spyAdapter(initial: AppData | null = null) {
   let stored = initial;
@@ -252,5 +252,36 @@ describe("AppDataProvider", () => {
     expect(windowRemove).toHaveBeenCalledWith("pagehide", expect.any(Function));
 
     vi.useRealTimers();
+  });
+
+  it("applies a change made by another tab without writing it back", async () => {
+    const { adapter, save } = spyAdapter();
+    const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+
+    const other = createSeedData();
+    other.isDemo = false;
+
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: STORAGE_KEY, newValue: JSON.stringify(other) }),
+      );
+    });
+
+    expect(result.current.data.isDemo).toBe(false);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("ignores an invalid value broadcast by another tab", async () => {
+    const { adapter } = spyAdapter();
+    const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    const before = result.current.data;
+
+    act(() => {
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: "{broken" }));
+    });
+
+    expect(result.current.data).toBe(before);
   });
 });
