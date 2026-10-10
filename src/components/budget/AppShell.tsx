@@ -21,7 +21,7 @@ function WeekRange({ view }: { view: AppView }) {
   return <div className="mt-1 truncate text-[11px] text-muted-foreground">{range}</div>;
 }
 
-function MainSkeleton() {
+export function MainSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-hidden="true">
       <div className="glass rounded-[20px] p-6 sm:p-7">

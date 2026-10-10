@@ -42,10 +42,14 @@ afterEach(async () => {
 describe("App routing", () => {
   it("renders the index route", async () => {
     const doc = await renderAt("/");
+    const text = doc.body.textContent ?? "";
 
     expect(doc.title).toBe("This Week — MNGS");
-    expect(doc.body.textContent).toContain("Safe to spend this week");
-    expect(doc.body.textContent).toContain("Income logged");
+    expect(text).toContain("Safe to spend this week");
+    expect(text).toContain("Income logged");
+    expect(text).toContain("Where this week's income goes");
+    expect(text).toContain("Adding entries comes next");
+    expect(text).toContain("This week's activity");
   });
 
   it("shows the demo banner and a live week range once hydrated", async () => {

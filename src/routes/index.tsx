@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ActivityList } from "@/components/budget/ActivityList";
+import { MainSkeleton } from "@/components/budget/AppShell";
+import { QuickAddForm } from "@/components/budget/QuickAddForm";
 import { SafeToSpendCard } from "@/components/budget/SafeToSpendCard";
 import { WaterfallBar } from "@/components/budget/WaterfallBar";
-import { QuickAddForm } from "@/components/budget/QuickAddForm";
-import { TransactionList } from "@/components/budget/TransactionList";
+import { WeekNotice } from "@/components/budget/WeekNotice";
+import { thisWeekView } from "@/lib/selectors";
+import { useAppView } from "@/lib/store/useAppView";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -20,14 +24,19 @@ export const Route = createFileRoute("/")({
 });
 
 function ThisWeek() {
+  const view = useAppView();
+  if (view === null) return <MainSkeleton />;
+  const week = thisWeekView(view.data, view.today);
+  const currency = view.data.settings.currency;
   return (
     <div className="flex flex-col gap-6">
-      <SafeToSpendCard />
+      <SafeToSpendCard week={week} currency={currency} />
+      <WeekNotice week={week} currency={currency} />
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <WaterfallBar />
-        <QuickAddForm />
+        <WaterfallBar week={week} currency={currency} />
+        <QuickAddForm categories={view.data.categories} />
       </div>
-      <TransactionList />
+      <ActivityList week={week} currency={currency} categories={view.data.categories} />
     </div>
   );
 }
