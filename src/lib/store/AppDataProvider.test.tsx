@@ -43,6 +43,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function setVisibility(state: DocumentVisibilityState) {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+}
+
+function resetVisibility() {
+  Reflect.deleteProperty(document, "visibilityState");
+}
+
 describe("AppDataProvider", () => {
   it("renders the seed on the first render without touching storage", () => {
     const { adapter, load, save } = spyAdapter();
@@ -171,5 +179,78 @@ describe("AppDataProvider", () => {
 
     await waitFor(() => expect(result.current.storageStatus.save).toBe("error"));
     expect(result.current.storageStatus.message).toBe("quota");
+  });
+
+  it("flushes pending changes when the document becomes hidden", () => {
+    vi.useFakeTimers();
+    setVisibility("hidden");
+    const { adapter, save } = spyAdapter();
+    const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter, 1000) });
+
+    act(() => {
+      result.current.dispatch({
+        type: "addIncome",
+        item: { date: "2026-10-05", amount: 500, source: "Gig", note: "" },
+      });
+    });
+    expect(save).not.toHaveBeenCalled();
+
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+
+    resetVisibility();
+    vi.useRealTimers();
+  });
+
+  it("flushes pending changes on pagehide", () => {
+    vi.useFakeTimers();
+    const { adapter, save } = spyAdapter();
+    const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter, 1000) });
+
+    act(() => {
+      result.current.dispatch({
+        type: "addIncome",
+        item: { date: "2026-10-05", amount: 500, source: "Gig", note: "" },
+      });
+    });
+
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    expect(save).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+  });
+
+  it("does not save on exit when nothing has changed", () => {
+    vi.useFakeTimers();
+    setVisibility("hidden");
+    const { adapter, save } = spyAdapter();
+    renderHook(() => useAppData(), { wrapper: wrapper(adapter, 1000) });
+
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(save).not.toHaveBeenCalled();
+
+    resetVisibility();
+    vi.useRealTimers();
+  });
+
+  it("removes its exit listeners on unmount", () => {
+    vi.useFakeTimers();
+    const documentRemove = vi.spyOn(document, "removeEventListener");
+    const windowRemove = vi.spyOn(window, "removeEventListener");
+    const { adapter } = spyAdapter();
+    const { unmount } = renderHook(() => useAppData(), { wrapper: wrapper(adapter, 1000) });
+
+    unmount();
+
+    expect(documentRemove).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
+    expect(windowRemove).toHaveBeenCalledWith("pagehide", expect.any(Function));
+
+    vi.useRealTimers();
   });
 });
