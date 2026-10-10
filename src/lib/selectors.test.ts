@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { incomeInWeek } from "./calc";
-import { bufferView, demoView, thisWeekView } from "./selectors";
+import {
+  billsGoalsView,
+  budgetsView,
+  bufferView,
+  demoView,
+  thisWeekView,
+  trendsView,
+} from "./selectors";
 import { createSeedData, startFresh } from "./store/seed";
 import type { AppData } from "./types";
 
@@ -277,5 +284,274 @@ describe("bufferView", () => {
     expect(shiftedBuffer.series.map((point) => point.weekStart)).toEqual(
       originalBuffer.series.map((point) => shift(point.weekStart, 21)),
     );
+  });
+});
+
+describe("budgetsView", () => {
+  it("reports per-category budgets grouped by type with weekly totals", () => {
+    const view = budgetsView(smallData(), "2026-03-09");
+
+    expect(view.rows.map((row) => row.categoryId)).toEqual(["c1", "c2", "c4", "c3"]);
+
+    expect(view.rows[0]).toEqual({
+      categoryId: "c1",
+      name: "Rent",
+      type: "essential",
+      plannedWeekly: 300,
+      plannedInOwnPeriod: 1300,
+      spentInOwnPeriod: 1300,
+      progress: 1,
+      overBy: 0,
+      drivenByBills: false,
+      billCount: 1,
+      billsExceedBudget: 0,
+    });
+    expect(view.rows[1]).toEqual({
+      categoryId: "c2",
+      name: "Food",
+      type: "essential",
+      plannedWeekly: 100,
+      plannedInOwnPeriod: 100,
+      spentInOwnPeriod: 10,
+      progress: 0.1,
+      overBy: 0,
+      drivenByBills: false,
+      billCount: 1,
+      billsExceedBudget: 0,
+    });
+    expect(view.rows[2]).toEqual({
+      categoryId: "c4",
+      name: "Emergency",
+      type: "savings",
+      plannedWeekly: 50,
+      plannedInOwnPeriod: 50,
+      spentInOwnPeriod: 0,
+      progress: 0,
+      overBy: 0,
+      drivenByBills: false,
+      billCount: 0,
+      billsExceedBudget: 0,
+    });
+    expect(view.rows[3]).toEqual({
+      categoryId: "c3",
+      name: "Fun",
+      type: "flexible",
+      plannedWeekly: 60,
+      plannedInOwnPeriod: 60,
+      spentInOwnPeriod: 15,
+      progress: 0.25,
+      overBy: 0,
+      drivenByBills: false,
+      billCount: 0,
+      billsExceedBudget: 0,
+    });
+
+    expect(view.totals).toEqual({ essential: 400, savings: 50, flexible: 60 });
+    const sumFor = (type: "essential" | "savings" | "flexible") =>
+      view.rows.filter((row) => row.type === type).reduce((sum, row) => sum + row.plannedWeekly, 0);
+    expect(view.totals.essential).toBeCloseTo(sumFor("essential"), 6);
+    expect(view.totals.savings).toBeCloseTo(sumFor("savings"), 6);
+    expect(view.totals.flexible).toBeCloseTo(sumFor("flexible"), 6);
+  });
+
+  it("reports overBy and bill pressure for a bill-driven category", () => {
+    const data = smallData();
+    data.categories.push({
+      id: "c5",
+      name: "Utilities",
+      type: "essential",
+      budgetAmount: 20,
+      budgetPeriod: "weekly",
+    });
+    data.bills.push({
+      id: "b3",
+      name: "Power",
+      amount: 30,
+      period: "weekly",
+      categoryId: "c5",
+      dueDay: "Thursday",
+    });
+    data.transactions.push({
+      id: "t6",
+      date: "2026-03-11",
+      amount: 45,
+      categoryId: "c5",
+      note: "Power bill",
+    });
+
+    const view = budgetsView(data, "2026-03-09");
+    const row = view.rows.find((entry) => entry.categoryId === "c5")!;
+
+    expect(row.plannedWeekly).toBe(30);
+    expect(row.drivenByBills).toBe(true);
+    expect(row.billCount).toBe(1);
+    expect(row.billsExceedBudget).toBeCloseTo(10, 6);
+    expect(row.spentInOwnPeriod).toBe(45);
+    expect(row.progress).toBeCloseTo(1.5, 6);
+    expect(row.overBy).toBe(15);
+    expect(view.totals.essential).toBeCloseTo(430, 6);
+  });
+
+  it("returns empty rows and zero totals for blank data", () => {
+    const view = budgetsView(
+      startFresh({
+        currency: "USD",
+        weekStartDay: "Monday",
+        baselineWeeklyIncome: 500,
+        openingBufferBalance: 0,
+      }),
+      "2026-03-09",
+    );
+
+    expect(view.rows).toEqual([]);
+    expect(view.totals).toEqual({ essential: 0, savings: 0, flexible: 0 });
+  });
+
+  it("keeps planned and bill fields unchanged by demoView's whole-week shift", () => {
+    const original = seed();
+    const shifted = demoView(original, "2026-10-19");
+    const originalView = budgetsView(original, "2026-09-28");
+    const shiftedView = budgetsView(shifted, "2026-10-19");
+
+    expect(shiftedView.totals).toEqual(originalView.totals);
+    expect(shiftedView.rows.map((row) => [row.categoryId, row.plannedWeekly])).toEqual(
+      originalView.rows.map((row) => [row.categoryId, row.plannedWeekly]),
+    );
+    expect(
+      shiftedView.rows.map((row) => [
+        row.drivenByBills,
+        row.billCount,
+        row.billsExceedBudget,
+        row.plannedInOwnPeriod,
+      ]),
+    ).toEqual(
+      originalView.rows.map((row) => [
+        row.drivenByBills,
+        row.billCount,
+        row.billsExceedBudget,
+        row.plannedInOwnPeriod,
+      ]),
+    );
+
+    const weeklyCategoryIds = shiftedView.rows
+      .filter((row) => row.plannedInOwnPeriod === row.plannedWeekly)
+      .map((row) => row.categoryId);
+    for (const categoryId of weeklyCategoryIds) {
+      expect(shiftedView.rows.find((row) => row.categoryId === categoryId)!.spentInOwnPeriod).toBe(
+        originalView.rows.find((row) => row.categoryId === categoryId)!.spentInOwnPeriod,
+      );
+    }
+  });
+});
+
+describe("billsGoalsView", () => {
+  it("reports bills with weekly equivalents and a weekly total", () => {
+    const view = billsGoalsView(smallData(), "2026-03-09");
+
+    expect(view.bills.map((bill) => [bill.id, bill.name, bill.categoryId])).toEqual([
+      ["b1", "Rent", "c1"],
+      ["b2", "Netflix", "c2"],
+    ]);
+    expect(view.bills[0]!.weekly).toBe(300);
+    expect(view.bills[1]!.weekly).toBeCloseTo((14 * 12) / 52, 6);
+    expect(view.weeklyTotal).toBeCloseTo(303.230769, 6);
+  });
+
+  it("reports goal progress, remaining, contribution and weeks left", () => {
+    const view = billsGoalsView(smallData(), "2026-03-09");
+
+    expect(view.goals).toEqual([
+      {
+        id: "g1",
+        name: "Trip",
+        targetAmount: 1000,
+        savedAmount: 400,
+        progress: 0.4,
+        remaining: 600,
+        weeklyContribution: 200,
+        weeksLeft: 3,
+      },
+    ]);
+  });
+
+  it("keeps weeksLeft null and contribution zero for goals without a target date", () => {
+    const data = smallData();
+    data.goals = [
+      { id: "g2", name: "No date", targetAmount: 0, savedAmount: 0 },
+      { id: "g3", name: "Over-saved", targetAmount: 500, savedAmount: 1000 },
+    ];
+
+    const [noDate, overSaved] = billsGoalsView(data, "2026-03-09").goals;
+
+    expect(noDate).toMatchObject({
+      progress: 0,
+      remaining: 0,
+      weeklyContribution: 0,
+      weeksLeft: null,
+    });
+    expect(overSaved).toMatchObject({
+      progress: 1,
+      remaining: 0,
+      weeklyContribution: 0,
+      weeksLeft: null,
+    });
+  });
+
+  it("is unchanged by demoView's whole-week shift", () => {
+    const original = seed();
+    const shifted = demoView(original, "2026-10-19");
+
+    expect(billsGoalsView(shifted, "2026-10-19")).toEqual(billsGoalsView(original, "2026-09-28"));
+  });
+});
+
+describe("trendsView", () => {
+  it("reports a 12-week series and a 4-month rollup", () => {
+    const view = trendsView(smallData(), "2026-03-09");
+
+    expect(view.series).toHaveLength(12);
+    expect(view.series[11]).toEqual({ weekStart: "2026-03-09", income: 250, spending: 25 });
+    expect(view.series[10]).toEqual({ weekStart: "2026-03-02", income: 400, spending: 1360 });
+
+    expect(view.rollup).toHaveLength(4);
+    expect(view.rollup[3]).toEqual({
+      month: "2026-03",
+      income: 650,
+      spending: 1385,
+      net: -735,
+    });
+  });
+
+  it("returns empty series and rollup for blank data", () => {
+    const view = trendsView(
+      startFresh({
+        currency: "USD",
+        weekStartDay: "Monday",
+        baselineWeeklyIncome: 500,
+        openingBufferBalance: 0,
+      }),
+      "2026-03-09",
+    );
+
+    expect(view.series).toHaveLength(12);
+    expect(view.series.every((point) => point.income === 0 && point.spending === 0)).toBe(true);
+    expect(view.rollup).toHaveLength(4);
+    expect(view.rollup.every((point) => point.income === 0 && point.spending === 0)).toBe(true);
+  });
+
+  it("shifts the weekly series values unchanged by demoView's whole-week shift", () => {
+    const original = seed();
+    const shifted = demoView(original, "2026-10-19");
+    const originalView = trendsView(original, "2026-09-28");
+    const shiftedView = trendsView(shifted, "2026-10-19");
+
+    expect(shiftedView.series.map((point) => [point.income, point.spending])).toEqual(
+      originalView.series.map((point) => [point.income, point.spending]),
+    );
+    expect(shiftedView.series.map((point) => point.weekStart)).toEqual(
+      originalView.series.map((point) => shift(point.weekStart, 21)),
+    );
+    expect(shiftedView.rollup).toHaveLength(originalView.rollup.length);
+    expect(shiftedView.rollup[3]!.month).toBe("2026-10");
   });
 });

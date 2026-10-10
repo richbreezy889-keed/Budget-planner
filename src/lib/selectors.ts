@@ -2,8 +2,10 @@ import {
   allocateWaterfall,
   bufferBalanceAsOf,
   bufferChangeInWeek,
+  categoryWeeklyPlanned,
   goalWeeklyContributionAsOf,
   incomeInWeek,
+  monthlyRollup,
   rollingAverageIncomeAsOf,
   runwayWeeksFromEssentials,
   safeToSpendAmount,
@@ -12,12 +14,28 @@ import {
   suggestedBaseline,
   weekEnd,
   weeklyEssentials,
+  weeklyEquivalent,
   weeklyPlannedByType,
   weeklySeries,
   weekStart,
 } from "./calc";
-import type { SafeStatus, WaterfallPlan, WaterfallResult, WeeklySeriesPoint } from "./calc";
-import type { AppData, Goal, IncomeEntry, ISODate, Transaction } from "./types";
+import type {
+  MonthlyRollupPoint,
+  SafeStatus,
+  WaterfallPlan,
+  WaterfallResult,
+  WeeklySeriesPoint,
+} from "./calc";
+import type {
+  AppData,
+  BudgetPeriod,
+  CategoryType,
+  Goal,
+  IncomeEntry,
+  ISODate,
+  RecurringBill,
+  Transaction,
+} from "./types";
 
 function parseLocalDate(iso: ISODate): Date {
   const parts = iso.split("-");
@@ -216,5 +234,137 @@ export function bufferView(data: AppData, today: ISODate): BufferView {
     suggestedBaseline: suggested,
     avg4VsBaseline,
     series: weeklySeries(data.incomeEntries, data.transactions, 12, start),
+  };
+}
+
+function billsWeekTotal(bills: RecurringBill[], categoryId: string): number {
+  return bills
+    .filter((bill) => bill.categoryId === categoryId)
+    .reduce((sum, bill) => sum + weeklyEquivalent(bill.amount, bill.period), 0);
+}
+
+function toOwnPeriod(amount: number, period: BudgetPeriod): number {
+  return period === "weekly" ? amount : (amount * 52) / 12;
+}
+
+export interface BudgetRow {
+  categoryId: string;
+  name: string;
+  type: CategoryType;
+  plannedWeekly: number;
+  plannedInOwnPeriod: number;
+  spentInOwnPeriod: number;
+  progress: number;
+  overBy: number;
+  drivenByBills: boolean;
+  billCount: number;
+  billsExceedBudget: number;
+}
+
+export interface BudgetsView {
+  rows: BudgetRow[];
+  totals: Record<CategoryType, number>;
+}
+
+export function budgetsView(data: AppData, today: ISODate): BudgetsView {
+  const start = weekStart(today, data.settings.weekStartDay);
+  const month = today.slice(0, 7);
+  const rows: BudgetRow[] = [];
+
+  for (const type of ["essential", "savings", "flexible"] as const) {
+    for (const category of data.categories) {
+      if (category.type !== type) continue;
+      const plannedWeekly = categoryWeeklyPlanned(category, data.bills);
+      const plannedInOwnPeriod = toOwnPeriod(plannedWeekly, category.budgetPeriod);
+      const spentInOwnPeriod =
+        category.budgetPeriod === "weekly"
+          ? spentInWeek(data.transactions, [category.id], start)
+          : data.transactions
+              .filter((transaction) => transaction.date.slice(0, 7) === month)
+              .filter((transaction) => transaction.categoryId === category.id)
+              .reduce((sum, transaction) => sum + transaction.amount, 0);
+      const billsWeekly = billsWeekTotal(data.bills, category.id);
+      const budgetWeekly = weeklyEquivalent(category.budgetAmount, category.budgetPeriod);
+      rows.push({
+        categoryId: category.id,
+        name: category.name,
+        type,
+        plannedWeekly,
+        plannedInOwnPeriod,
+        spentInOwnPeriod,
+        progress: plannedInOwnPeriod === 0 ? 0 : spentInOwnPeriod / plannedInOwnPeriod,
+        overBy: Math.max(0, spentInOwnPeriod - plannedInOwnPeriod),
+        drivenByBills: billsWeekly > budgetWeekly,
+        billCount: data.bills.filter((bill) => bill.categoryId === category.id).length,
+        billsExceedBudget: Math.max(0, billsWeekly - budgetWeekly),
+      });
+    }
+  }
+
+  const planned = weeklyPlannedByType(data.categories, data.bills);
+  return {
+    rows,
+    totals: { essential: planned.essential, savings: planned.savings, flexible: planned.flexible },
+  };
+}
+
+export interface BillRow {
+  id: string;
+  name: string;
+  weekly: number;
+  categoryId: string;
+}
+
+export interface GoalRow {
+  id: string;
+  name: string;
+  targetAmount: number;
+  savedAmount: number;
+  progress: number;
+  remaining: number;
+  weeklyContribution: number;
+  weeksLeft: number | null;
+}
+
+export interface BillsGoalsView {
+  bills: BillRow[];
+  weeklyTotal: number;
+  goals: GoalRow[];
+}
+
+export function billsGoalsView(data: AppData, today: ISODate): BillsGoalsView {
+  const bills = data.bills.map((bill) => ({
+    id: bill.id,
+    name: bill.name,
+    weekly: weeklyEquivalent(bill.amount, bill.period),
+    categoryId: bill.categoryId,
+  }));
+  const weeklyTotal = bills.reduce((sum, bill) => sum + bill.weekly, 0);
+  const goals = data.goals.map((goal) => ({
+    id: goal.id,
+    name: goal.name,
+    targetAmount: goal.targetAmount,
+    savedAmount: goal.savedAmount,
+    progress: goal.targetAmount === 0 ? 0 : Math.min(1, goal.savedAmount / goal.targetAmount),
+    remaining: Math.max(0, goal.targetAmount - goal.savedAmount),
+    weeklyContribution: goalWeeklyContributionAsOf(goal, today),
+    weeksLeft:
+      goal.targetDate === undefined
+        ? null
+        : Math.max(1, Math.ceil(daysBetween(today, goal.targetDate) / 7)),
+  }));
+  return { bills, weeklyTotal, goals };
+}
+
+export interface TrendsView {
+  series: WeeklySeriesPoint[];
+  rollup: MonthlyRollupPoint[];
+}
+
+export function trendsView(data: AppData, today: ISODate): TrendsView {
+  const start = weekStart(today, data.settings.weekStartDay);
+  return {
+    series: weeklySeries(data.incomeEntries, data.transactions, 12, start),
+    rollup: monthlyRollup(data.incomeEntries, data.transactions, 4, today),
   };
 }
