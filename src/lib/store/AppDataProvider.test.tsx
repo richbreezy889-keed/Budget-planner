@@ -1,7 +1,7 @@
-import { act, render, renderHook, waitFor } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppData } from "../types";
 import { AppDataProvider } from "./AppDataProvider";
@@ -39,10 +39,6 @@ const wrapper =
     </AppDataProvider>
   );
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
 function setVisibility(state: DocumentVisibilityState) {
   Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
 }
@@ -50,6 +46,15 @@ function setVisibility(state: DocumentVisibilityState) {
 function resetVisibility() {
   Reflect.deleteProperty(document, "visibilityState");
 }
+
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe("AppDataProvider", () => {
   it("renders the seed on the first render without touching storage", () => {
@@ -62,22 +67,22 @@ describe("AppDataProvider", () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it("hydrates from storage after mount", async () => {
+  it("hydrates from storage after mount", () => {
     const stored = createSeedData();
     stored.isDemo = false;
     const { adapter, load } = spyAdapter(stored);
 
-    const { findByText } = render(
+    render(
       <AppDataProvider storage={adapter}>
         <Probe />
       </AppDataProvider>,
     );
 
-    expect(await findByText("real")).toBeTruthy();
+    expect(screen.getByText("real")).toBeTruthy();
     expect(load).toHaveBeenCalledTimes(1);
   });
 
-  it("does not save on mount when nothing changed", async () => {
+  it("does not save on mount when nothing changed", () => {
     const stored = createSeedData();
     const { adapter, save } = spyAdapter(stored);
 
@@ -87,15 +92,17 @@ describe("AppDataProvider", () => {
       </AppDataProvider>,
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    act(() => {
+      vi.advanceTimersByTime(40);
+    });
     expect(save).not.toHaveBeenCalled();
   });
 
-  it("debounces and persists changes after hydration", async () => {
+  it("debounces and persists changes after hydration", () => {
     const { adapter, save } = spyAdapter();
     const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
 
-    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(result.current.hydrated).toBe(true);
 
     act(() => {
       result.current.dispatch({
@@ -105,15 +112,17 @@ describe("AppDataProvider", () => {
     });
     expect(save).not.toHaveBeenCalled();
 
-    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    act(() => {
+      vi.advanceTimersByTime(10);
+    });
+    expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0]?.[0].incomeEntries).toHaveLength(3);
   });
 
-  it("surfaces a clear error when refusing an action", async () => {
+  it("surfaces a clear error when refusing an action", () => {
     const { adapter } = spyAdapter();
     const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
 
-    await waitFor(() => expect(result.current.hydrated).toBe(true));
     act(() => {
       result.current.dispatch({ type: "deleteCategory", id: "groceries" });
     });
@@ -130,12 +139,12 @@ describe("AppDataProvider", () => {
     spy.mockRestore();
   });
 
-  it("reports the load status and a successful save", async () => {
+  it("reports the load status and a successful save", () => {
     const stored = createSeedData();
     const { adapter, save } = spyAdapter(stored);
     const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
 
-    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(result.current.hydrated).toBe(true);
     expect(result.current.storageStatus.load).toBe("ok");
 
     act(() => {
@@ -144,45 +153,50 @@ describe("AppDataProvider", () => {
         item: { date: "2026-10-05", amount: 500, source: "Gig", note: "" },
       });
     });
+    act(() => {
+      vi.advanceTimersByTime(10);
+    });
 
-    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(result.current.storageStatus.save).toBe("ok"));
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(result.current.storageStatus.save).toBe("ok");
     expect(result.current.storageStatus.message).toBeNull();
   });
 
-  it("maps a corrupt load to a recovered status", async () => {
+  it("maps a corrupt load to a recovered status", () => {
     const adapter: StorageAdapter = {
       load: vi.fn((): LoadResult => ({ data: createSeedData(), status: "recovered" })),
       save: vi.fn((): SaveResult => ({ ok: true })),
       clear: vi.fn(),
     };
     const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
-    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(result.current.hydrated).toBe(true);
     expect(result.current.storageStatus.load).toBe("recovered");
   });
 
-  it("exposes a save error when the storage rejects a write", async () => {
+  it("exposes a save error when the storage rejects a write", () => {
     const adapter: StorageAdapter = {
       load: vi.fn((): LoadResult => ({ data: createSeedData(), status: "seeded" })),
       save: vi.fn((): SaveResult => ({ ok: false, reason: "quota" })),
       clear: vi.fn(),
     };
     const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
+    expect(result.current.hydrated).toBe(true);
 
-    await waitFor(() => expect(result.current.hydrated).toBe(true));
     act(() => {
       result.current.dispatch({
         type: "addIncome",
         item: { date: "2026-10-05", amount: 500, source: "Gig", note: "" },
       });
     });
+    act(() => {
+      vi.advanceTimersByTime(10);
+    });
 
-    await waitFor(() => expect(result.current.storageStatus.save).toBe("error"));
+    expect(result.current.storageStatus.save).toBe("error");
     expect(result.current.storageStatus.message).toBe("quota");
   });
 
   it("flushes pending changes when the document becomes hidden", () => {
-    vi.useFakeTimers();
     setVisibility("hidden");
     const { adapter, save } = spyAdapter();
     const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter, 1000) });
@@ -201,11 +215,9 @@ describe("AppDataProvider", () => {
     expect(save).toHaveBeenCalledTimes(1);
 
     resetVisibility();
-    vi.useRealTimers();
   });
 
   it("flushes pending changes on pagehide", () => {
-    vi.useFakeTimers();
     const { adapter, save } = spyAdapter();
     const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter, 1000) });
 
@@ -220,12 +232,9 @@ describe("AppDataProvider", () => {
       window.dispatchEvent(new Event("pagehide"));
     });
     expect(save).toHaveBeenCalledTimes(1);
-
-    vi.useRealTimers();
   });
 
   it("does not save on exit when nothing has changed", () => {
-    vi.useFakeTimers();
     setVisibility("hidden");
     const { adapter, save } = spyAdapter();
     renderHook(() => useAppData(), { wrapper: wrapper(adapter, 1000) });
@@ -236,11 +245,9 @@ describe("AppDataProvider", () => {
     expect(save).not.toHaveBeenCalled();
 
     resetVisibility();
-    vi.useRealTimers();
   });
 
   it("removes its exit listeners on unmount", () => {
-    vi.useFakeTimers();
     const documentRemove = vi.spyOn(document, "removeEventListener");
     const windowRemove = vi.spyOn(window, "removeEventListener");
     const { adapter } = spyAdapter();
@@ -250,14 +257,12 @@ describe("AppDataProvider", () => {
 
     expect(documentRemove).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
     expect(windowRemove).toHaveBeenCalledWith("pagehide", expect.any(Function));
-
-    vi.useRealTimers();
   });
 
-  it("applies a change made by another tab without writing it back", async () => {
+  it("applies a change made by another tab without writing it back", () => {
     const { adapter, save } = spyAdapter();
     const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
-    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(result.current.hydrated).toBe(true);
 
     const other = createSeedData();
     other.isDemo = false;
@@ -269,13 +274,17 @@ describe("AppDataProvider", () => {
     });
 
     expect(result.current.data.isDemo).toBe(false);
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
     expect(save).not.toHaveBeenCalled();
   });
 
-  it("ignores an invalid value broadcast by another tab", async () => {
+  it("ignores an invalid value broadcast by another tab", () => {
     const { adapter } = spyAdapter();
     const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
-    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(result.current.hydrated).toBe(true);
     const before = result.current.data;
 
     act(() => {
