@@ -1,4 +1,22 @@
-import { weekStart } from "./calc";
+import {
+  allocateWaterfall,
+  bufferBalanceAsOf,
+  bufferChangeInWeek,
+  goalWeeklyContributionAsOf,
+  incomeInWeek,
+  rollingAverageIncomeAsOf,
+  runwayWeeksFromEssentials,
+  safeToSpendAmount,
+  safeToSpendStatus,
+  spentInWeek,
+  suggestedBaseline,
+  weekEnd,
+  weeklyEssentials,
+  weeklyPlannedByType,
+  weeklySeries,
+  weekStart,
+} from "./calc";
+import type { SafeStatus, WaterfallPlan, WaterfallResult, WeeklySeriesPoint } from "./calc";
 import type { AppData, Goal, IncomeEntry, ISODate, Transaction } from "./types";
 
 function parseLocalDate(iso: ISODate): Date {
@@ -60,5 +78,143 @@ export function demoView(data: AppData, today: ISODate): AppData {
     incomeEntries: data.incomeEntries.map(shiftIncome),
     transactions: data.transactions.map(shiftTransaction),
     goals: data.goals.map(shiftGoal),
+  };
+}
+
+function weeklyPlan(data: AppData, today: ISODate): WaterfallPlan {
+  const planned = weeklyPlannedByType(data.categories, data.bills);
+  const goals = data.goals.reduce((sum, goal) => sum + goalWeeklyContributionAsOf(goal, today), 0);
+  return {
+    essentials: planned.essential,
+    savings: planned.savings,
+    goals,
+    flexible: planned.flexible,
+  };
+}
+
+export interface WeekActivityItem {
+  kind: "income" | "spend";
+  id: string;
+  date: ISODate;
+  amount: number;
+  note: string;
+  categoryId?: string;
+}
+
+export interface ThisWeekView {
+  weekStart: ISODate;
+  weekEnd: ISODate;
+  incomeLogged: number;
+  incomeEntryCount: number;
+  hasIncome: boolean;
+  plan: WaterfallPlan;
+  waterfall: WaterfallResult;
+  flexibleBudget: number;
+  flexibleSpent: number;
+  safeToSpend: number;
+  status: SafeStatus;
+  flexibleShortfall: number;
+  activity: WeekActivityItem[];
+}
+
+export function thisWeekView(data: AppData, today: ISODate): ThisWeekView {
+  const start = weekStart(today, data.settings.weekStartDay);
+  const end = weekEnd(today, data.settings.weekStartDay);
+  const inWeek = (date: ISODate): boolean => date >= start && date <= end;
+  const plan = weeklyPlan(data, today);
+  const incomeLogged = incomeInWeek(data.incomeEntries, start);
+  const waterfall = allocateWaterfall(incomeLogged, plan);
+  const flexibleIds = data.categories
+    .filter((category) => category.type === "flexible")
+    .map((category) => category.id);
+  const flexibleSpent = spentInWeek(data.transactions, flexibleIds, start);
+  const safeToSpend = safeToSpendAmount(plan.flexible, flexibleSpent);
+
+  const activity: WeekActivityItem[] = [];
+  for (const entry of data.incomeEntries) {
+    if (inWeek(entry.date)) {
+      activity.push({
+        kind: "income",
+        id: entry.id,
+        date: entry.date,
+        amount: entry.amount,
+        note: entry.note,
+      });
+    }
+  }
+  for (const transaction of data.transactions) {
+    if (inWeek(transaction.date)) {
+      activity.push({
+        kind: "spend",
+        id: transaction.id,
+        date: transaction.date,
+        amount: transaction.amount,
+        note: transaction.note,
+        categoryId: transaction.categoryId,
+      });
+    }
+  }
+  activity.sort((a, b) =>
+    a.date === b.date ? a.id.localeCompare(b.id) : a.date < b.date ? 1 : -1,
+  );
+
+  return {
+    weekStart: start,
+    weekEnd: end,
+    incomeLogged,
+    incomeEntryCount: data.incomeEntries.filter((entry) => inWeek(entry.date)).length,
+    hasIncome: incomeLogged > 0,
+    plan,
+    waterfall,
+    flexibleBudget: plan.flexible,
+    flexibleSpent,
+    safeToSpend,
+    status: safeToSpendStatus(safeToSpend, plan.flexible),
+    flexibleShortfall: waterfall.shortfall.flexible,
+    activity,
+  };
+}
+
+export interface BufferView {
+  bufferBalance: number;
+  changeThisWeek: number;
+  essentialsWeekly: number;
+  runwayWeeks: number | null;
+  avg4: number | null;
+  avg8: number | null;
+  baseline: number;
+  suggestedBaseline: number | null;
+  avg4VsBaseline: "above" | "below" | "equal" | null;
+  series: WeeklySeriesPoint[];
+}
+
+export function bufferView(data: AppData, today: ISODate): BufferView {
+  const start = weekStart(today, data.settings.weekStartDay);
+  const bufferBalance = bufferBalanceAsOf(
+    data.settings.openingBufferBalance,
+    data.incomeEntries,
+    data.transactions,
+    start,
+  );
+  const changeThisWeek = bufferChangeInWeek(data.incomeEntries, data.transactions, start);
+  const essentialsWeekly = weeklyEssentials(data.categories, data.bills);
+  const avg4 = rollingAverageIncomeAsOf(data.incomeEntries, 4, start);
+  const avg8 = rollingAverageIncomeAsOf(data.incomeEntries, 8, start);
+  const baseline = data.settings.baselineWeeklyIncome;
+  const suggested = suggestedBaseline(data.incomeEntries, start);
+  const avg4VsBaseline: BufferView["avg4VsBaseline"] =
+    avg4 === null ? null : avg4 > baseline ? "above" : avg4 < baseline ? "below" : "equal";
+
+  return {
+    bufferBalance,
+    changeThisWeek,
+    essentialsWeekly,
+    runwayWeeks: runwayWeeksFromEssentials(bufferBalance, essentialsWeekly),
+    avg4,
+    avg8,
+    baseline,
+    suggestedBaseline: suggested,
+    avg4VsBaseline,
+    series: weeklySeries(data.incomeEntries, data.transactions, 12, start),
   };
 }
