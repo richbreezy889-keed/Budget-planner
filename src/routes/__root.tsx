@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "@/components/budget/AppShell";
+import { AppDataProvider } from "@/lib/store/AppDataProvider";
 
 function NotFoundComponent() {
   return (
@@ -122,9 +123,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell>
-        <Outlet />
-      </AppShell>
+      <AppDataProvider>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      </AppDataProvider>
     </QueryClientProvider>
   );
 }
