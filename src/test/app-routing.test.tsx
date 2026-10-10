@@ -48,6 +48,17 @@ describe("App routing", () => {
     expect(doc.body.textContent).toContain("Income logged");
   });
 
+  it("shows the demo banner and a live week range once hydrated", async () => {
+    const doc = await renderAt("/");
+    const text = doc.body.textContent ?? "";
+
+    expect(text).toContain("You are viewing demo data (read-only).");
+    expect(text).toMatch(
+      /[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2} – [A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}/,
+    );
+    expect(text).not.toMatch(/Week \d/);
+  });
+
   it("renders the buffer route", async () => {
     const doc = await renderAt("/buffer");
 
