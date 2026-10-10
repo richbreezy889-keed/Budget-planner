@@ -23,7 +23,7 @@ export const Route = createFileRoute("/")({
   component: ThisWeek,
 });
 
-function ThisWeek() {
+export function ThisWeek() {
   const view = useAppView();
   if (view === null) return <MainSkeleton />;
   const week = thisWeekView(view.data, view.today);
