@@ -166,6 +166,20 @@ export function categoryRecordErrors(value: unknown): string[] {
   return errors;
 }
 
+/** Category rules for a brand-new template, which additionally requires a name. */
+export function starterCategoryErrors(value: unknown): string[] {
+  const errors = categoryRecordErrors(value);
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    !isNonEmptyString((value as Record<string, unknown>)["name"])
+  ) {
+    errors.push("category.name is required");
+  }
+  return errors;
+}
+
 export function transactionRecordErrors(value: unknown): string[] {
   const errors: string[] = [];
   validateTransaction(value, "transaction", errors);

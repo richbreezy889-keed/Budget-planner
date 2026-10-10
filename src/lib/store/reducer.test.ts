@@ -9,7 +9,7 @@ import type {
   Settings,
   Transaction,
 } from "../types";
-import { appReducer, id, type AppReducerResult } from "./reducer";
+import { appReducer, id, type AppReducerResult, type NewCategory } from "./reducer";
 import { createSeedData } from "./seed";
 
 const okData = (result: AppReducerResult): AppData => {
@@ -268,6 +268,101 @@ describe("settings, replaceAll and startFresh", () => {
     expect(next.transactions).toEqual([]);
     expect(next.bills).toEqual([]);
     expect(next.goals).toEqual([]);
+  });
+});
+
+describe("startFreshWithCategories", () => {
+  const settings: Settings = {
+    currency: "TZS",
+    weekStartDay: "Monday",
+    baselineWeeklyIncome: 900,
+    openingBufferBalance: 50,
+  };
+
+  const template = (): NewCategory => ({
+    name: "Rent",
+    type: "essential",
+    budgetAmount: 0,
+    budgetPeriod: "monthly",
+  });
+
+  it("returns a non-demo dataset with the given categories and new ids", () => {
+    const before = seed();
+    const next = okData(
+      appReducer(before, {
+        type: "startFreshWithCategories",
+        settings,
+        categories: [
+          template(),
+          { name: "Dining out", type: "flexible", budgetAmount: 40, budgetPeriod: "weekly" },
+        ],
+      }),
+    );
+    expect(next.isDemo).toBe(false);
+    expect(next.settings).toEqual(settings);
+    expect(next.incomeEntries).toEqual([]);
+    expect(next.transactions).toEqual([]);
+    expect(next.bills).toEqual([]);
+    expect(next.goals).toEqual([]);
+    expect(next.categories.map((category) => category.name)).toEqual(["Rent", "Dining out"]);
+    expect(next.categories.map((category) => category.type)).toEqual(["essential", "flexible"]);
+    const ids = next.categories.map((category) => category.id);
+    expect(ids.every((value) => value.length > 0)).toBe(true);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).not.toContain("rent");
+  });
+
+  it("accepts an empty category list", () => {
+    const next = okData(
+      appReducer(seed(), { type: "startFreshWithCategories", settings, categories: [] }),
+    );
+    expect(next.categories).toEqual([]);
+    expect(next.isDemo).toBe(false);
+  });
+
+  it("refuses a NaN budget and leaves the input state unchanged", () => {
+    const before = seed();
+    const result = appReducer(before, {
+      type: "startFreshWithCategories",
+      settings,
+      categories: [{ ...template(), budgetAmount: Number.NaN }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("budgetAmount");
+    expect(before.isDemo).toBe(true);
+    expect(before.categories).toHaveLength(9);
+  });
+
+  it("refuses an empty category name with a clear error", () => {
+    const result = appReducer(seed(), {
+      type: "startFreshWithCategories",
+      settings,
+      categories: [{ ...template(), name: "" }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("name is required");
+  });
+
+  it("refuses invalid settings", () => {
+    const result = appReducer(seed(), {
+      type: "startFreshWithCategories",
+      settings: { ...settings, currency: "" },
+      categories: [template()],
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("leaves the whole state unchanged when any category is rejected", () => {
+    const before = seed();
+    const result = appReducer(before, {
+      type: "startFreshWithCategories",
+      settings,
+      categories: [template(), { ...template(), name: "", budgetAmount: Number.NaN }],
+    });
+    expect(result.ok).toBe(false);
+    expect(before.isDemo).toBe(true);
+    expect(before.categories).toHaveLength(9);
+    expect(before.goals).toHaveLength(3);
   });
 });
 

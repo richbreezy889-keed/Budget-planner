@@ -15,6 +15,7 @@ import {
   incomeRecordErrors,
   isNonEmptyString,
   settingsRecordErrors,
+  starterCategoryErrors,
   transactionRecordErrors,
 } from "./validate";
 
@@ -55,7 +56,8 @@ export type AppAction =
   | { type: "deleteGoal"; id: string }
   | { type: "setSettings"; settings: Settings }
   | { type: "replaceAll"; data: AppData }
-  | { type: "startFresh"; settings: Settings };
+  | { type: "startFresh"; settings: Settings }
+  | { type: "startFreshWithCategories"; settings: Settings; categories: NewCategory[] };
 
 export type AppReducerResult = { ok: true; data: AppData } | { ok: false; error: string };
 
@@ -80,6 +82,19 @@ function requireExisting<T extends { id: string }>(
 
 function hasCategory(state: AppData, categoryId: string): boolean {
   return state.categories.some((row) => row.id === categoryId);
+}
+
+/** Validates every category template, naming the first offender in the message. */
+function starterCategoriesError(categories: NewCategory[]): string | null {
+  for (let index = 0; index < categories.length; index += 1) {
+    const category = categories[index];
+    const error = firstError(starterCategoryErrors(category));
+    if (error) {
+      const label = category?.name ? `"${category.name}"` : `#${index + 1}`;
+      return `Category ${label}: ${error}`;
+    }
+  }
+  return null;
 }
 
 function addById<T extends { id: string }>(list: T[], item: Omit<T, "id">): T[] {
@@ -201,6 +216,17 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
       const error = firstError(settingsRecordErrors(action.settings));
       if (error) return refuse(error);
       return ok(startFresh(action.settings));
+    }
+    case "startFreshWithCategories": {
+      const error =
+        firstError(settingsRecordErrors(action.settings)) ??
+        starterCategoriesError(action.categories);
+      if (error) return refuse(error);
+      const fresh = startFresh(action.settings);
+      return ok({
+        ...fresh,
+        categories: action.categories.map((category) => ({ ...category, id: id() })),
+      });
     }
 
     default: {
