@@ -8,6 +8,15 @@ import type {
   Transaction,
 } from "../types";
 import { startFresh } from "./seed";
+import {
+  billRecordErrors,
+  categoryRecordErrors,
+  goalRecordErrors,
+  incomeRecordErrors,
+  isNonEmptyString,
+  settingsRecordErrors,
+  transactionRecordErrors,
+} from "./validate";
 
 /** Generates a unique id, preferring `crypto.randomUUID` when available. */
 export function id(): string {
@@ -53,6 +62,18 @@ export type AppReducerResult = { ok: true; data: AppData } | { ok: false; error:
 const ok = (data: AppData): AppReducerResult => ({ ok: true, data });
 const refuse = (error: string): AppReducerResult => ({ ok: false, error });
 
+function firstError(errors: string[]): string | null {
+  return errors.length > 0 ? (errors[0] ?? null) : null;
+}
+
+function requireId(value: unknown, label: string): string | null {
+  return isNonEmptyString(value) ? null : `${label} id is required`;
+}
+
+function hasCategory(state: AppData, categoryId: string): boolean {
+  return state.categories.some((row) => row.id === categoryId);
+}
+
 function addById<T extends { id: string }>(list: T[], item: Omit<T, "id">): T[] {
   return [...list, { ...item, id: id() } as T];
 }
@@ -67,47 +88,103 @@ function removeById<T extends { id: string }>(list: T[], targetId: string): T[] 
 
 export function appReducer(state: AppData, action: AppAction): AppReducerResult {
   switch (action.type) {
-    case "addIncome":
+    case "addIncome": {
+      const error = firstError(incomeRecordErrors(action.item));
+      if (error) return refuse(error);
       return ok({ ...state, incomeEntries: addById(state.incomeEntries, action.item) });
-    case "updateIncome":
+    }
+    case "updateIncome": {
+      const error =
+        firstError(incomeRecordErrors(action.item)) ?? requireId(action.item.id, "income");
+      if (error) return refuse(error);
       return ok({ ...state, incomeEntries: updateBy(state.incomeEntries, action.item) });
+    }
     case "deleteIncome":
       return ok({ ...state, incomeEntries: removeById(state.incomeEntries, action.id) });
 
-    case "addTransaction":
+    case "addTransaction": {
+      const error =
+        firstError(transactionRecordErrors(action.item)) ??
+        (hasCategory(state, action.item.categoryId)
+          ? null
+          : `Unknown category: "${action.item.categoryId}".`);
+      if (error) return refuse(error);
       return ok({ ...state, transactions: addById(state.transactions, action.item) });
-    case "updateTransaction":
+    }
+    case "updateTransaction": {
+      const error =
+        firstError(transactionRecordErrors(action.item)) ??
+        requireId(action.item.id, "transaction") ??
+        (hasCategory(state, action.item.categoryId)
+          ? null
+          : `Unknown category: "${action.item.categoryId}".`);
+      if (error) return refuse(error);
       return ok({ ...state, transactions: updateBy(state.transactions, action.item) });
+    }
     case "deleteTransaction":
       return ok({ ...state, transactions: removeById(state.transactions, action.id) });
 
-    case "addCategory":
+    case "addCategory": {
+      const error = firstError(categoryRecordErrors(action.item));
+      if (error) return refuse(error);
       return ok({ ...state, categories: addById(state.categories, action.item) });
-    case "updateCategory":
+    }
+    case "updateCategory": {
+      const error =
+        firstError(categoryRecordErrors(action.item)) ?? requireId(action.item.id, "category");
+      if (error) return refuse(error);
       return ok({ ...state, categories: updateBy(state.categories, action.item) });
+    }
     case "deleteCategory":
       return deleteCategory(state, action.id);
 
-    case "addBill":
+    case "addBill": {
+      const error =
+        firstError(billRecordErrors(action.item)) ??
+        (hasCategory(state, action.item.categoryId)
+          ? null
+          : `Unknown category: "${action.item.categoryId}".`);
+      if (error) return refuse(error);
       return ok({ ...state, bills: addById(state.bills, action.item) });
-    case "updateBill":
+    }
+    case "updateBill": {
+      const error =
+        firstError(billRecordErrors(action.item)) ??
+        requireId(action.item.id, "bill") ??
+        (hasCategory(state, action.item.categoryId)
+          ? null
+          : `Unknown category: "${action.item.categoryId}".`);
+      if (error) return refuse(error);
       return ok({ ...state, bills: updateBy(state.bills, action.item) });
+    }
     case "deleteBill":
       return ok({ ...state, bills: removeById(state.bills, action.id) });
 
-    case "addGoal":
+    case "addGoal": {
+      const error = firstError(goalRecordErrors(action.item));
+      if (error) return refuse(error);
       return ok({ ...state, goals: addById(state.goals, action.item) });
-    case "updateGoal":
+    }
+    case "updateGoal": {
+      const error = firstError(goalRecordErrors(action.item)) ?? requireId(action.item.id, "goal");
+      if (error) return refuse(error);
       return ok({ ...state, goals: updateBy(state.goals, action.item) });
+    }
     case "deleteGoal":
       return ok({ ...state, goals: removeById(state.goals, action.id) });
 
-    case "setSettings":
+    case "setSettings": {
+      const error = firstError(settingsRecordErrors(action.settings));
+      if (error) return refuse(error);
       return ok({ ...state, settings: { ...action.settings } });
+    }
     case "replaceAll":
       return ok(action.data);
-    case "startFresh":
+    case "startFresh": {
+      const error = firstError(settingsRecordErrors(action.settings));
+      if (error) return refuse(error);
       return ok(startFresh(action.settings));
+    }
 
     default: {
       const exhaustive: never = action;

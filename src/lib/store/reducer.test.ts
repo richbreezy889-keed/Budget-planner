@@ -270,3 +270,104 @@ describe("settings, replaceAll and startFresh", () => {
     expect(next.goals).toEqual([]);
   });
 });
+
+describe("record validation", () => {
+  it("refuses addIncome with a non-finite amount and leaves state untouched", () => {
+    const before = seed();
+    expect(appReducer(before, { type: "addIncome", item: income({ amount: Number.NaN }) }).ok).toBe(
+      false,
+    );
+    expect(
+      appReducer(before, {
+        type: "addIncome",
+        item: income({ amount: Number.POSITIVE_INFINITY }),
+      }).ok,
+    ).toBe(false);
+    expect(before.incomeEntries).toHaveLength(2);
+  });
+
+  it("refuses addIncome with an invalid date", () => {
+    const result = appReducer(seed(), { type: "addIncome", item: income({ date: "2026/10/05" }) });
+    expect(result.ok).toBe(false);
+  });
+
+  it("refuses addTransaction that references an unknown category", () => {
+    const result = appReducer(seed(), {
+      type: "addTransaction",
+      item: transaction({ categoryId: "nope" }),
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("refuses updateTransaction that moves a row to an unknown category", () => {
+    const result = appReducer(seed(), {
+      type: "updateTransaction",
+      item: transaction({ id: "t2", categoryId: "nope" }),
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("refuses addBill that references an unknown category", () => {
+    const result = appReducer(seed(), { type: "addBill", item: bill({ categoryId: "nope" }) });
+    expect(result.ok).toBe(false);
+  });
+
+  it("refuses updateBill that moves a row to an unknown category", () => {
+    const result = appReducer(seed(), {
+      type: "updateBill",
+      item: bill({ id: "b5", categoryId: "nope" }),
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("refuses addCategory with an invalid type or period", () => {
+    expect(
+      appReducer(seed(), { type: "addCategory", item: category({ type: "weird" as never }) }).ok,
+    ).toBe(false);
+    expect(
+      appReducer(seed(), {
+        type: "addCategory",
+        item: category({ budgetPeriod: "daily" as never }),
+      }).ok,
+    ).toBe(false);
+  });
+
+  it("refuses addGoal with a non-finite target", () => {
+    const result = appReducer(seed(), {
+      type: "addGoal",
+      item: goal({ targetAmount: Number.NaN }),
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("refuses setSettings with empty or non-finite values", () => {
+    const empty = appReducer(seed(), {
+      type: "setSettings",
+      settings: {
+        currency: "",
+        weekStartDay: "Monday",
+        baselineWeeklyIncome: 850,
+        openingBufferBalance: 0,
+      },
+    });
+    expect(empty.ok).toBe(false);
+
+    const badNumber = appReducer(seed(), {
+      type: "setSettings",
+      settings: {
+        currency: "USD",
+        weekStartDay: "Monday",
+        baselineWeeklyIncome: Number.NaN,
+        openingBufferBalance: 0,
+      },
+    });
+    expect(badNumber.ok).toBe(false);
+  });
+
+  it("refuses an update with an empty id and leaves state unchanged", () => {
+    const before = seed();
+    const result = appReducer(before, { type: "updateIncome", item: income({ id: "" }) });
+    expect(result.ok).toBe(false);
+    expect(before.incomeEntries).toHaveLength(2);
+  });
+});

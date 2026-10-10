@@ -7,7 +7,7 @@ const BUDGET_PERIODS = ["weekly", "monthly"];
 const BILL_PERIODS = ["weekly", "monthly", "yearly"];
 const WEEK_START_DAYS = ["Monday", "Sunday", "Saturday"];
 
-function isISODate(value: unknown): value is string {
+export function isISODate(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parts = value.split("-");
   const year = Number(parts[0]);
@@ -19,11 +19,11 @@ function isISODate(value: unknown): value is string {
   );
 }
 
-function isFiniteNumber(value: unknown): value is number {
+export function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function isNonEmptyString(value: unknown): value is string {
+export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
@@ -63,95 +63,125 @@ function checkUniqueIds(list: unknown[], label: string, errors: string[]): void 
   });
 }
 
-function validateSettings(value: unknown, errors: string[]): void {
+function validateSettings(value: unknown, label: string, errors: string[]): void {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    errors.push("settings must be an object");
+    errors.push(`${label} must be an object`);
     return;
   }
   const settings = value as Record<string, unknown>;
   if (!isNonEmptyString(settings["currency"])) {
-    errors.push("settings.currency must be a non-empty string");
+    errors.push(`${label}.currency must be a non-empty string`);
   }
   const weekStartDay = settings["weekStartDay"];
   if (typeof weekStartDay !== "string" || !WEEK_START_DAYS.includes(weekStartDay)) {
-    errors.push("settings.weekStartDay must be one of Monday, Sunday, Saturday");
+    errors.push(`${label}.weekStartDay must be one of Monday, Sunday, Saturday`);
   }
   if (!isFiniteNumber(settings["baselineWeeklyIncome"])) {
-    errors.push("settings.baselineWeeklyIncome must be a finite number");
+    errors.push(`${label}.baselineWeeklyIncome must be a finite number`);
   }
   if (!isFiniteNumber(settings["openingBufferBalance"])) {
-    errors.push("settings.openingBufferBalance must be a finite number");
+    errors.push(`${label}.openingBufferBalance must be a finite number`);
   }
 }
 
-function validateIncome(item: unknown, index: number, errors: string[]): void {
-  const row = asRow(item, `incomeEntries[${index}]`, errors);
-  if (!isISODate(row["date"]))
-    errors.push(`incomeEntries[${index}].date must be an ISO date (YYYY-MM-DD)`);
-  if (!isFiniteNumber(row["amount"])) {
-    errors.push(`incomeEntries[${index}].amount must be a finite number`);
-  }
-  if (typeof row["source"] !== "string")
-    errors.push(`incomeEntries[${index}].source must be a string`);
-  if (typeof row["note"] !== "string") errors.push(`incomeEntries[${index}].note must be a string`);
+function validateIncome(item: unknown, label: string, errors: string[]): void {
+  const row = asRow(item, label, errors);
+  if (!isISODate(row["date"])) errors.push(`${label}.date must be an ISO date (YYYY-MM-DD)`);
+  if (!isFiniteNumber(row["amount"])) errors.push(`${label}.amount must be a finite number`);
+  if (typeof row["source"] !== "string") errors.push(`${label}.source must be a string`);
+  if (typeof row["note"] !== "string") errors.push(`${label}.note must be a string`);
 }
 
-function validateCategory(item: unknown, index: number, errors: string[]): void {
-  const row = asRow(item, `categories[${index}]`, errors);
-  if (typeof row["name"] !== "string") errors.push(`categories[${index}].name must be a string`);
+function validateCategory(item: unknown, label: string, errors: string[]): void {
+  const row = asRow(item, label, errors);
+  if (typeof row["name"] !== "string") errors.push(`${label}.name must be a string`);
   const type = row["type"];
   if (typeof type !== "string" || !CATEGORY_TYPES.includes(type)) {
-    errors.push(`categories[${index}].type must be one of essential, savings, flexible`);
+    errors.push(`${label}.type must be one of essential, savings, flexible`);
   }
   if (!isFiniteNumber(row["budgetAmount"])) {
-    errors.push(`categories[${index}].budgetAmount must be a finite number`);
+    errors.push(`${label}.budgetAmount must be a finite number`);
   }
   const budgetPeriod = row["budgetPeriod"];
   if (typeof budgetPeriod !== "string" || !BUDGET_PERIODS.includes(budgetPeriod)) {
-    errors.push(`categories[${index}].budgetPeriod must be one of weekly, monthly`);
+    errors.push(`${label}.budgetPeriod must be one of weekly, monthly`);
   }
 }
 
-function validateTransaction(item: unknown, index: number, errors: string[]): void {
-  const row = asRow(item, `transactions[${index}]`, errors);
-  if (!isISODate(row["date"]))
-    errors.push(`transactions[${index}].date must be an ISO date (YYYY-MM-DD)`);
-  if (!isFiniteNumber(row["amount"])) {
-    errors.push(`transactions[${index}].amount must be a finite number`);
-  }
+function validateTransaction(item: unknown, label: string, errors: string[]): void {
+  const row = asRow(item, label, errors);
+  if (!isISODate(row["date"])) errors.push(`${label}.date must be an ISO date (YYYY-MM-DD)`);
+  if (!isFiniteNumber(row["amount"])) errors.push(`${label}.amount must be a finite number`);
   if (!isNonEmptyString(row["categoryId"])) {
-    errors.push(`transactions[${index}].categoryId must be a non-empty string`);
+    errors.push(`${label}.categoryId must be a non-empty string`);
   }
-  if (typeof row["note"] !== "string") errors.push(`transactions[${index}].note must be a string`);
+  if (typeof row["note"] !== "string") errors.push(`${label}.note must be a string`);
 }
 
-function validateBill(item: unknown, index: number, errors: string[]): void {
-  const row = asRow(item, `bills[${index}]`, errors);
-  if (typeof row["name"] !== "string") errors.push(`bills[${index}].name must be a string`);
-  if (!isFiniteNumber(row["amount"])) errors.push(`bills[${index}].amount must be a finite number`);
+function validateBill(item: unknown, label: string, errors: string[]): void {
+  const row = asRow(item, label, errors);
+  if (typeof row["name"] !== "string") errors.push(`${label}.name must be a string`);
+  if (!isFiniteNumber(row["amount"])) errors.push(`${label}.amount must be a finite number`);
   const period = row["period"];
   if (typeof period !== "string" || !BILL_PERIODS.includes(period)) {
-    errors.push(`bills[${index}].period must be one of weekly, monthly, yearly`);
+    errors.push(`${label}.period must be one of weekly, monthly, yearly`);
   }
   if (!isNonEmptyString(row["categoryId"])) {
-    errors.push(`bills[${index}].categoryId must be a non-empty string`);
+    errors.push(`${label}.categoryId must be a non-empty string`);
   }
-  if (typeof row["dueDay"] !== "string") errors.push(`bills[${index}].dueDay must be a string`);
+  if (typeof row["dueDay"] !== "string") errors.push(`${label}.dueDay must be a string`);
 }
 
-function validateGoal(item: unknown, index: number, errors: string[]): void {
-  const row = asRow(item, `goals[${index}]`, errors);
-  if (typeof row["name"] !== "string") errors.push(`goals[${index}].name must be a string`);
+function validateGoal(item: unknown, label: string, errors: string[]): void {
+  const row = asRow(item, label, errors);
+  if (typeof row["name"] !== "string") errors.push(`${label}.name must be a string`);
   if (!isFiniteNumber(row["targetAmount"])) {
-    errors.push(`goals[${index}].targetAmount must be a finite number`);
+    errors.push(`${label}.targetAmount must be a finite number`);
   }
   if (!isFiniteNumber(row["savedAmount"])) {
-    errors.push(`goals[${index}].savedAmount must be a finite number`);
+    errors.push(`${label}.savedAmount must be a finite number`);
   }
   const targetDate = row["targetDate"];
   if (targetDate !== undefined && !isISODate(targetDate)) {
-    errors.push(`goals[${index}].targetDate must be an ISO date (YYYY-MM-DD)`);
+    errors.push(`${label}.targetDate must be an ISO date (YYYY-MM-DD)`);
   }
+}
+
+/** Per-record validators, shipped separately so the reducer can reuse them. */
+export function settingsRecordErrors(value: unknown): string[] {
+  const errors: string[] = [];
+  validateSettings(value, "settings", errors);
+  return errors;
+}
+
+export function incomeRecordErrors(value: unknown): string[] {
+  const errors: string[] = [];
+  validateIncome(value, "income", errors);
+  return errors;
+}
+
+export function categoryRecordErrors(value: unknown): string[] {
+  const errors: string[] = [];
+  validateCategory(value, "category", errors);
+  return errors;
+}
+
+export function transactionRecordErrors(value: unknown): string[] {
+  const errors: string[] = [];
+  validateTransaction(value, "transaction", errors);
+  return errors;
+}
+
+export function billRecordErrors(value: unknown): string[] {
+  const errors: string[] = [];
+  validateBill(value, "bill", errors);
+  return errors;
+}
+
+export function goalRecordErrors(value: unknown): string[] {
+  const errors: string[] = [];
+  validateGoal(value, "goal", errors);
+  return errors;
 }
 
 /** Validates an untrusted value and returns typed AppData or a list of problems. */
@@ -171,7 +201,7 @@ export function validateAppData(input: unknown): ValidationResult {
     errors.push("isDemo must be a boolean");
   }
 
-  validateSettings(source["settings"], errors);
+  validateSettings(source["settings"], "settings", errors);
 
   const incomeEntries = asArray(source["incomeEntries"], "incomeEntries", errors);
   const categories = asArray(source["categories"], "categories", errors);
@@ -185,11 +215,13 @@ export function validateAppData(input: unknown): ValidationResult {
   checkUniqueIds(bills, "bills", errors);
   checkUniqueIds(goals, "goals", errors);
 
-  incomeEntries.forEach((item, index) => validateIncome(item, index, errors));
-  categories.forEach((item, index) => validateCategory(item, index, errors));
-  transactions.forEach((item, index) => validateTransaction(item, index, errors));
-  bills.forEach((item, index) => validateBill(item, index, errors));
-  goals.forEach((item, index) => validateGoal(item, index, errors));
+  incomeEntries.forEach((item, index) => validateIncome(item, `incomeEntries[${index}]`, errors));
+  categories.forEach((item, index) => validateCategory(item, `categories[${index}]`, errors));
+  transactions.forEach((item, index) =>
+    validateTransaction(item, `transactions[${index}]`, errors),
+  );
+  bills.forEach((item, index) => validateBill(item, `bills[${index}]`, errors));
+  goals.forEach((item, index) => validateGoal(item, `goals[${index}]`, errors));
 
   const categoryIds = new Set(
     categories
