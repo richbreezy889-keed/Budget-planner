@@ -30,6 +30,7 @@ import type {
 } from "./calc";
 import type {
   AppData,
+  BillPeriod,
   BudgetPeriod,
   CategoryType,
   Goal,
@@ -319,6 +320,9 @@ export function budgetsView(data: AppData, today: ISODate): BudgetsView {
 export interface BillRow {
   id: string;
   name: string;
+  amount: number;
+  period: BillPeriod;
+  dueDay: string;
   weekly: number;
   categoryId: string;
 }
@@ -332,6 +336,7 @@ export interface GoalRow {
   remaining: number;
   weeklyContribution: number;
   weeksLeft: number | null;
+  targetDate?: ISODate;
 }
 
 export interface BillsGoalsView {
@@ -344,6 +349,9 @@ export function billsGoalsView(data: AppData, today: ISODate): BillsGoalsView {
   const bills = data.bills.map((bill) => ({
     id: bill.id,
     name: bill.name,
+    amount: bill.amount,
+    period: bill.period,
+    dueDay: bill.dueDay,
     weekly: weeklyEquivalent(bill.amount, bill.period),
     categoryId: bill.categoryId,
   }));
@@ -360,6 +368,7 @@ export function billsGoalsView(data: AppData, today: ISODate): BillsGoalsView {
       goal.targetDate === undefined
         ? null
         : Math.max(1, Math.ceil(daysBetween(today, goal.targetDate) / 7)),
+    ...(goal.targetDate === undefined ? {} : { targetDate: goal.targetDate }),
   }));
   return { bills, weeklyTotal, goals };
 }

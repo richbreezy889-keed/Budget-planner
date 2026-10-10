@@ -632,12 +632,26 @@ describe("billsGoalsView", () => {
   it("reports bills with weekly equivalents and a weekly total", () => {
     const view = billsGoalsView(smallData(), "2026-03-09");
 
-    expect(view.bills.map((bill) => [bill.id, bill.name, bill.categoryId])).toEqual([
-      ["b1", "Rent", "c1"],
-      ["b2", "Netflix", "c2"],
+    expect(view.bills).toEqual([
+      {
+        id: "b1",
+        name: "Rent",
+        amount: 1300,
+        period: "monthly",
+        dueDay: "1st",
+        weekly: 300,
+        categoryId: "c1",
+      },
+      {
+        id: "b2",
+        name: "Netflix",
+        amount: 14,
+        period: "monthly",
+        dueDay: "15th",
+        weekly: (14 * 12) / 52,
+        categoryId: "c2",
+      },
     ]);
-    expect(view.bills[0]!.weekly).toBe(300);
-    expect(view.bills[1]!.weekly).toBeCloseTo((14 * 12) / 52, 6);
     expect(view.weeklyTotal).toBeCloseTo(303.230769, 6);
   });
 
@@ -654,6 +668,7 @@ describe("billsGoalsView", () => {
         remaining: 600,
         weeklyContribution: 200,
         weeksLeft: 3,
+        targetDate: "2026-03-30",
       },
     ]);
   });
@@ -684,8 +699,22 @@ describe("billsGoalsView", () => {
   it("is unchanged by demoView's whole-week shift", () => {
     const original = seed();
     const shifted = demoView(original, "2026-10-19");
+    const originalView = billsGoalsView(original, "2026-09-28");
+    const shiftedView = billsGoalsView(shifted, "2026-10-19");
 
-    expect(billsGoalsView(shifted, "2026-10-19")).toEqual(billsGoalsView(original, "2026-09-28"));
+    expect(shiftedView.bills).toEqual(originalView.bills);
+    expect(shiftedView.weeklyTotal).toBe(originalView.weeklyTotal);
+    expect(shiftedView.goals.map((goal) => goal.weeklyContribution)).toEqual(
+      originalView.goals.map((goal) => goal.weeklyContribution),
+    );
+    expect(shiftedView.goals.map((goal) => goal.weeksLeft)).toEqual(
+      originalView.goals.map((goal) => goal.weeksLeft),
+    );
+    expect(shiftedView.goals.map((goal) => goal.targetDate)).toEqual(
+      originalView.goals.map((goal) =>
+        goal.targetDate === undefined ? undefined : shift(goal.targetDate, 21),
+      ),
+    );
   });
 });
 
