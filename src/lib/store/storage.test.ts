@@ -173,6 +173,39 @@ describe("createStorageAdapter", () => {
     expect(storage.raw(oldest)).toBeNull();
   });
 
+  it("does not duplicate a backup whose identical raw data is already stored", () => {
+    vi.useFakeTimers();
+    const storage = new FakeStorage();
+    storage.setItem(STORAGE_KEY, "corrupt-data");
+    const adapter = createStorageAdapter(storage);
+
+    adapter.load();
+    adapter.load();
+    expect(storage.corruptKeys()).toHaveLength(1);
+    expect(storage.raw(storage.corruptKeys()[0]!)).toBe("corrupt-data");
+  });
+
+  it("repeated loads of the same corrupt data never evict an older, different backup", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    const storage = new FakeStorage();
+    const older = [
+      `${CORRUPT_PREFIX}2020-01-01T00:00:00.000Z`,
+      `${CORRUPT_PREFIX}2020-01-02T00:00:00.000Z`,
+    ];
+    for (const key of older) storage.setItem(key, "different");
+    storage.setItem(STORAGE_KEY, "corrupt-data");
+    const adapter = createStorageAdapter(storage);
+
+    adapter.load();
+    adapter.load();
+    adapter.load();
+
+    expect(storage.corruptKeys()).toHaveLength(3);
+    expect(storage.raw(older[0]!)).toBe("different");
+    expect(storage.raw(older[1]!)).toBe("different");
+  });
+
   it("refuses to persist invalid data and writes nothing", () => {
     const storage = new FakeStorage();
     const adapter = createStorageAdapter(storage);

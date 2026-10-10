@@ -50,6 +50,9 @@ function listKeys(storage: StorageLike): string[] {
 function backupCorrupt(storage: StorageLike, raw: string): void {
   try {
     const existing = listKeys(storage).filter((key) => key.startsWith(CORRUPT_PREFIX));
+    const alreadyBackedUp = existing.some((key) => storage.getItem(key) === raw);
+    if (alreadyBackedUp) return;
+
     const taken = new Set(existing);
     const stamp = new Date().toISOString();
     let key = `${CORRUPT_PREFIX}${stamp}`;
