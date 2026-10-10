@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { incomeInWeek } from "./calc";
+import { incomeInWeek, spentInCategory } from "./calc";
 import {
   billsGoalsView,
   budgetsView,
@@ -405,6 +405,24 @@ describe("budgetsView", () => {
 
     expect(view.rows).toEqual([]);
     expect(view.totals).toEqual({ essential: 0, savings: 0, flexible: 0 });
+  });
+
+  it("derives spentInOwnPeriod from calc's spentInCategory", () => {
+    const data = smallData();
+    const view = budgetsView(data, "2026-03-09");
+
+    for (const row of view.rows) {
+      const category = data.categories.find((entry) => entry.id === row.categoryId)!;
+      expect(row.spentInOwnPeriod).toBe(
+        spentInCategory(
+          category.id,
+          data.transactions,
+          category.budgetPeriod,
+          "2026-03-09",
+          data.settings.weekStartDay,
+        ),
+      );
+    }
   });
 
   it("keeps planned and bill fields unchanged by demoView's whole-week shift", () => {

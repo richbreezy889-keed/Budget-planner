@@ -10,6 +10,7 @@ import {
   runwayWeeksFromEssentials,
   safeToSpendAmount,
   safeToSpendStatus,
+  spentInCategory,
   spentInWeek,
   suggestedBaseline,
   weekEnd,
@@ -267,8 +268,6 @@ export interface BudgetsView {
 }
 
 export function budgetsView(data: AppData, today: ISODate): BudgetsView {
-  const start = weekStart(today, data.settings.weekStartDay);
-  const month = today.slice(0, 7);
   const rows: BudgetRow[] = [];
 
   for (const type of ["essential", "savings", "flexible"] as const) {
@@ -276,13 +275,13 @@ export function budgetsView(data: AppData, today: ISODate): BudgetsView {
       if (category.type !== type) continue;
       const plannedWeekly = categoryWeeklyPlanned(category, data.bills);
       const plannedInOwnPeriod = toOwnPeriod(plannedWeekly, category.budgetPeriod);
-      const spentInOwnPeriod =
-        category.budgetPeriod === "weekly"
-          ? spentInWeek(data.transactions, [category.id], start)
-          : data.transactions
-              .filter((transaction) => transaction.date.slice(0, 7) === month)
-              .filter((transaction) => transaction.categoryId === category.id)
-              .reduce((sum, transaction) => sum + transaction.amount, 0);
+      const spentInOwnPeriod = spentInCategory(
+        category.id,
+        data.transactions,
+        category.budgetPeriod,
+        today,
+        data.settings.weekStartDay,
+      );
       const billsWeekly = billsWeekTotal(data.bills, category.id);
       const budgetWeekly = weeklyEquivalent(category.budgetAmount, category.budgetPeriod);
       rows.push({
