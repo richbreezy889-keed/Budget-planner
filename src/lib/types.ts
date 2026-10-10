@@ -52,3 +52,15 @@ export interface Goal {
   savedAmount: number;
   targetDate?: ISODate;
 }
+
+/** The complete persisted application state. */
+export interface AppData {
+  version: 1;
+  isDemo: boolean;
+  settings: Settings;
+  incomeEntries: IncomeEntry[];
+  categories: Category[];
+  transactions: Transaction[];
+  bills: RecurringBill[];
+  goals: Goal[];
+}
