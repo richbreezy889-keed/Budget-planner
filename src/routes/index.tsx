@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ActivityList } from "@/components/budget/ActivityList";
 import { MainSkeleton } from "@/components/budget/AppShell";
+import { EmptyState, PageHeader } from "@/components/budget/Panel";
 import { QuickAddForm } from "@/components/budget/QuickAddForm";
 import { SafeToSpendCard } from "@/components/budget/SafeToSpendCard";
 import { WaterfallBar } from "@/components/budget/WaterfallBar";
@@ -28,6 +29,17 @@ export function ThisWeek() {
   if (view === null) return <MainSkeleton />;
   const week = thisWeekView(view.data, view.today);
   const currency = view.data.settings.currency;
+  if (!view.isDemo && week.flexibleBudget === 0) {
+    return (
+      <div>
+        <PageHeader title="This Week" subtitle="Your safe-to-spend number for this week." />
+        <EmptyState
+          title="Set a flexible budget to see your safe-to-spend"
+          hint="Add a flexible category in Budgets, or run Start fresh to include starter categories."
+        />
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-6">
       <SafeToSpendCard week={week} currency={currency} />

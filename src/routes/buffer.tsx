@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { IncomeLineChart } from "@/components/budget/charts";
 import { MainSkeleton } from "@/components/budget/AppShell";
-import { PageHeader, Panel, Stat } from "@/components/budget/Panel";
+import { EmptyState, PageHeader, Panel, Stat } from "@/components/budget/Panel";
 import { formatMoney } from "@/lib/format";
 import { bufferView } from "@/lib/selectors";
 import { useAppView } from "@/lib/store/useAppView";
@@ -33,6 +33,22 @@ export function BufferPage() {
   if (view === null) return <MainSkeleton />;
   const currency = view.data.settings.currency;
   const buffer = bufferView(view.data, view.today);
+  const hasHistory = view.data.incomeEntries.length > 0 || view.data.transactions.length > 0;
+
+  if (!view.isDemo && !hasHistory) {
+    return (
+      <div>
+        <PageHeader
+          title="Buffer & Runway"
+          subtitle="The buffer absorbs good and bad weeks so your baseline stays steady."
+        />
+        <EmptyState
+          title="No history yet"
+          hint="Log income and spending to see your buffer, runway and weekly trends."
+        />
+      </div>
+    );
+  }
 
   return (
     <div>

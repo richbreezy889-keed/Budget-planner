@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { format, parseISO } from "date-fns";
 import { MainSkeleton } from "@/components/budget/AppShell";
 import { IncomeSpendChart } from "@/components/budget/charts";
-import { PageHeader, Panel } from "@/components/budget/Panel";
+import { EmptyState, PageHeader, Panel } from "@/components/budget/Panel";
 import { formatMoney } from "@/lib/format";
 import { trendsView } from "@/lib/selectors";
 import { useAppView } from "@/lib/store/useAppView";
@@ -27,6 +27,19 @@ export function TrendsPage() {
   if (view === null) return <MainSkeleton />;
   const currency = view.data.settings.currency;
   const trends = trendsView(view.data, view.today);
+  const hasData = view.data.incomeEntries.length > 0 || view.data.transactions.length > 0;
+
+  if (!view.isDemo && !hasData) {
+    return (
+      <div>
+        <PageHeader title="Trends" subtitle="Income vs spending over the last 12 weeks." />
+        <EmptyState
+          title="No data yet"
+          hint="Log some income and spending to compare income against spending over time."
+        />
+      </div>
+    );
+  }
 
   return (
     <div>

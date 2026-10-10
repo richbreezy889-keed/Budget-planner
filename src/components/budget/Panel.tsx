@@ -34,6 +34,24 @@ export function PageHeader({ title, subtitle }: { title: string; subtitle?: stri
   );
 }
 
+export function EmptyState({
+  title,
+  hint,
+  action,
+}: {
+  title: string;
+  hint?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="glass rounded-2xl border border-dashed border-border p-8 text-center">
+      <p className="text-[14px] font-medium">{title}</p>
+      {hint && <p className="mt-1 text-[13px] text-muted-foreground">{hint}</p>}
+      {action && <div className="mt-4 flex justify-center">{action}</div>}
+    </div>
+  );
+}
+
 export function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <Panel>

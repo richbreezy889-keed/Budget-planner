@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MainSkeleton } from "@/components/budget/AppShell";
-import { PageHeader, Panel, Progress } from "@/components/budget/Panel";
+import { EmptyState, PageHeader, Panel, Progress } from "@/components/budget/Panel";
 import { formatMoney } from "@/lib/format";
 import { budgetsView } from "@/lib/selectors";
 import { useAppView } from "@/lib/store/useAppView";
@@ -35,6 +35,21 @@ export function BudgetsPage() {
   if (view === null) return <MainSkeleton />;
   const currency = view.data.settings.currency;
   const budgets = budgetsView(view.data, view.today);
+
+  if (!view.isDemo && view.data.categories.length === 0) {
+    return (
+      <div>
+        <PageHeader
+          title="Budgets"
+          subtitle="Planned amounts per category, shown weekly or monthly."
+        />
+        <EmptyState
+          title="No budget categories yet"
+          hint="Add your first category in Start fresh, then set an amount and period."
+        />
+      </div>
+    );
+  }
 
   return (
     <div>
