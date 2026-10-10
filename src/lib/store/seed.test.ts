@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { bills, categories, goals, incomeEntries, settings, transactions } from "../mockData";
+import { weekStart } from "../calc";
 import type { Settings } from "../types";
 import { createSeedData, startFresh } from "./seed";
+import { DEMO_ANCHOR_WEEK_START } from "./seed";
 
 describe("createSeedData", () => {
   it("returns the mock data as demo version 1", () => {
@@ -24,6 +26,15 @@ describe("createSeedData", () => {
     const second = createSeedData();
     expect(second.incomeEntries).toHaveLength(incomeEntries.length);
     expect(second.settings.baselineWeeklyIncome).toBe(settings.baselineWeeklyIncome);
+  });
+
+  it("anchors the demo shift to the Monday of the week with the latest mock activity", () => {
+    const latest = [...incomeEntries, ...transactions]
+      .map((entry) => entry.date)
+      .sort()
+      .at(-1)!;
+    expect(weekStart(latest, "Monday")).toBe(DEMO_ANCHOR_WEEK_START);
+    expect(new Date(`${DEMO_ANCHOR_WEEK_START}T00:00:00`).getDay()).toBe(1);
   });
 });
 

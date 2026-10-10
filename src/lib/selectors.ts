@@ -20,6 +20,7 @@ import {
   weeklySeries,
   weekStart,
 } from "./calc";
+import { DEMO_ANCHOR_WEEK_START } from "./store/seed";
 import type {
   MonthlyRollupPoint,
   SafeStatus,
@@ -63,18 +64,9 @@ function shiftDate(date: ISODate, days: number): ISODate {
   return toISODate(addDays(parseLocalDate(date), days));
 }
 
-function latestActivity(data: AppData, today: ISODate): ISODate {
-  const dates = [
-    ...data.incomeEntries.map((entry) => entry.date),
-    ...data.transactions.map((transaction) => transaction.date),
-  ];
-  if (dates.length === 0) return today;
-  return [...dates].sort()[dates.length - 1]!;
-}
-
 export function demoView(data: AppData, today: ISODate): AppData {
   if (!data.isDemo) return data;
-  const demoWeekStart = weekStart(latestActivity(data, today), "Monday");
+  const demoWeekStart = weekStart(DEMO_ANCHOR_WEEK_START, "Monday");
   const realWeekStart = weekStart(today, "Monday");
   const shiftDays = Math.floor(daysBetween(demoWeekStart, realWeekStart) / 7) * 7;
   if (shiftDays === 0) return data;

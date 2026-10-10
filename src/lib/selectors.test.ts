@@ -125,6 +125,33 @@ describe("demoView", () => {
     });
     expect(demoView(nonDemo, "2026-10-19")).toBe(nonDemo);
   });
+
+  it("does not re-anchor when a later-dated row is added to the demo", () => {
+    const base = seed();
+    const withLaterRow = seed();
+    withLaterRow.transactions.push({
+      id: "t99",
+      date: "2026-12-01",
+      amount: 5,
+      categoryId: "c3",
+      note: "Later spend",
+    });
+
+    const baseShifted = demoView(base, "2026-10-19");
+    const laterShifted = demoView(withLaterRow, "2026-10-19");
+
+    expect(laterShifted.incomeEntries.map((entry) => entry.date)).toEqual(
+      baseShifted.incomeEntries.map((entry) => entry.date),
+    );
+    expect(
+      laterShifted.transactions
+        .filter((transaction) => transaction.id !== "t99")
+        .map((transaction) => transaction.date),
+    ).toEqual(baseShifted.transactions.map((transaction) => transaction.date));
+    expect(laterShifted.transactions.find((transaction) => transaction.id === "t99")?.date).toBe(
+      "2026-12-22",
+    );
+  });
 });
 
 describe("thisWeekView", () => {
