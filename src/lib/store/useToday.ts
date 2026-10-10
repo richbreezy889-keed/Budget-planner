@@ -12,15 +12,18 @@ function toLocalISODate(date: Date): ISODate {
 /**
  * The local calendar date as `YYYY-MM-DD`, or null before mount.
  * It is null during SSR and the first render because the server runs in UTC and
- * would otherwise render a different date than the browser. Re-checks when the
- * tab becomes visible again, and schedules a check just after each local midnight,
- * so the date rolls over even if the tab stays open across midnight.
+ * would otherwise render a different date than the browser. Stays fresh via a
+ * 60-second interval, a check just after each local midnight, and re-checks on
+ * visibility, focus and pageshow. State is only updated when the date changes.
  */
 export function useToday(): ISODate | null {
   const [today, setToday] = useState<ISODate | null>(null);
 
   useEffect(() => {
-    const update = () => setToday(toLocalISODate(new Date()));
+    const update = () => {
+      const next = toLocalISODate(new Date());
+      setToday((current) => (current === next ? current : next));
+    };
 
     update();
 
@@ -43,14 +46,23 @@ export function useToday(): ISODate | null {
     };
     scheduleMidnightCheck();
 
+    const interval = setInterval(update, 60000);
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") update();
     };
+    const handleFocus = () => update();
+    const handlePageShow = () => update();
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("pageshow", handlePageShow);
     return () => {
       if (midnightTimer !== undefined) clearTimeout(midnightTimer);
+      clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);
 
