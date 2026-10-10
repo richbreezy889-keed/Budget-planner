@@ -7,13 +7,17 @@ import type { AppData } from "../types";
 import { AppDataProvider } from "./AppDataProvider";
 import { useAppData } from "./context";
 import { createSeedData } from "./seed";
-import type { StorageAdapter } from "./storage";
+import type { LoadResult, SaveResult, StorageAdapter } from "./storage";
 
 function spyAdapter(initial: AppData | null = null) {
   let stored = initial;
-  const load = vi.fn((): AppData => stored ?? createSeedData());
-  const save = vi.fn((data: AppData) => {
+  const load = vi.fn((): LoadResult => ({
+    data: stored ?? createSeedData(),
+    status: stored ? "ok" : "seeded",
+  }));
+  const save = vi.fn((data: AppData): SaveResult => {
     stored = data;
+    return { ok: true };
   });
   const clear = vi.fn(() => {
     stored = null;
@@ -116,5 +120,56 @@ describe("AppDataProvider", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     expect(() => renderHook(() => useAppData())).toThrow(/AppDataProvider/);
     spy.mockRestore();
+  });
+
+  it("reports the load status and a successful save", async () => {
+    const stored = createSeedData();
+    const { adapter, save } = spyAdapter(stored);
+    const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
+
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(result.current.storageStatus.load).toBe("ok");
+
+    act(() => {
+      result.current.dispatch({
+        type: "addIncome",
+        item: { date: "2026-10-05", amount: 500, source: "Gig", note: "" },
+      });
+    });
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(result.current.storageStatus.save).toBe("ok"));
+    expect(result.current.storageStatus.message).toBeNull();
+  });
+
+  it("maps a corrupt load to a recovered status", async () => {
+    const adapter: StorageAdapter = {
+      load: vi.fn((): LoadResult => ({ data: createSeedData(), status: "recovered" })),
+      save: vi.fn((): SaveResult => ({ ok: true })),
+      clear: vi.fn(),
+    };
+    const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(result.current.storageStatus.load).toBe("recovered");
+  });
+
+  it("exposes a save error when the storage rejects a write", async () => {
+    const adapter: StorageAdapter = {
+      load: vi.fn((): LoadResult => ({ data: createSeedData(), status: "seeded" })),
+      save: vi.fn((): SaveResult => ({ ok: false, reason: "quota" })),
+      clear: vi.fn(),
+    };
+    const { result } = renderHook(() => useAppData(), { wrapper: wrapper(adapter) });
+
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    act(() => {
+      result.current.dispatch({
+        type: "addIncome",
+        item: { date: "2026-10-05", amount: 500, source: "Gig", note: "" },
+      });
+    });
+
+    await waitFor(() => expect(result.current.storageStatus.save).toBe("error"));
+    expect(result.current.storageStatus.message).toBe("quota");
   });
 });

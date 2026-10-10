@@ -2,6 +2,16 @@ import { createContext, useContext, type Dispatch } from "react";
 
 import type { AppData } from "../types";
 import type { AppAction } from "./reducer";
+import type { LoadStatus } from "./storage";
+
+export interface StorageStatus {
+  /** How the initial data was obtained. */
+  load: LoadStatus;
+  /** The outcome of the most recent persist attempt. */
+  save: "idle" | "ok" | "error";
+  /** Why the most recent persist failed, if it did. */
+  message: string | null;
+}
 
 export interface AppDataContextValue {
   data: AppData;
@@ -10,6 +20,8 @@ export interface AppDataContextValue {
   hydrated: boolean;
   /** The most recent refusal message, e.g. a blocked category delete. */
   error: string | null;
+  /** Load/save health of the backing storage. */
+  storageStatus: StorageStatus;
 }
 
 export const AppDataContext = createContext<AppDataContextValue | null>(null);

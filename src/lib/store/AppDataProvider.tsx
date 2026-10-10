@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 
 import type { AppData } from "../types";
-import { AppDataContext, type AppDataContextValue } from "./context";
+import { AppDataContext, type AppDataContextValue, type StorageStatus } from "./context";
 import { appReducer, type AppAction } from "./reducer";
 import { createSeedData } from "./seed";
 import { localStorageAdapter, type StorageAdapter } from "./storage";
@@ -19,6 +19,8 @@ function rootReducer(state: ProviderState, action: AppAction): ProviderState {
 
 const createInitialState = (): ProviderState => ({ data: createSeedData(), error: null });
 
+const initialStorageStatus: StorageStatus = { load: "seeded", save: "idle", message: null };
+
 export interface AppDataProviderProps {
   children: ReactNode;
   storage?: StorageAdapter;
@@ -32,13 +34,15 @@ export function AppDataProvider({
 }: AppDataProviderProps) {
   const [state, dispatch] = useReducer(rootReducer, undefined, createInitialState);
   const [hydrated, setHydrated] = useState(false);
+  const [storageStatus, setStorageStatus] = useState<StorageStatus>(initialStorageStatus);
   const lastPersistedRef = useRef<AppData | null>(null);
 
   // Read storage only after mount so the server and first client render match the seed.
   useEffect(() => {
-    const loaded = storage.load();
-    lastPersistedRef.current = loaded;
-    dispatch({ type: "replaceAll", data: loaded });
+    const result = storage.load();
+    lastPersistedRef.current = result.data;
+    dispatch({ type: "replaceAll", data: result.data });
+    setStorageStatus({ load: result.status, save: "idle", message: null });
     setHydrated(true);
   }, [storage]);
 
@@ -47,15 +51,20 @@ export function AppDataProvider({
     if (!hydrated) return;
     if (state.data === lastPersistedRef.current) return;
     const handle = setTimeout(() => {
-      storage.save(state.data);
-      lastPersistedRef.current = state.data;
+      const result = storage.save(state.data);
+      if (result.ok) {
+        lastPersistedRef.current = state.data;
+        setStorageStatus((prev) => ({ ...prev, save: "ok", message: null }));
+      } else {
+        setStorageStatus((prev) => ({ ...prev, save: "error", message: result.reason }));
+      }
     }, debounceMs);
     return () => clearTimeout(handle);
   }, [state.data, hydrated, storage, debounceMs]);
 
   const value = useMemo<AppDataContextValue>(
-    () => ({ data: state.data, dispatch, hydrated, error: state.error }),
-    [state.data, state.error, hydrated],
+    () => ({ data: state.data, dispatch, hydrated, error: state.error, storageStatus }),
+    [state.data, state.error, hydrated, storageStatus],
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

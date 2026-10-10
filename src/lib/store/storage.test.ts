@@ -34,10 +34,18 @@ const customData = (): AppData => {
   return data;
 };
 
+const invalidData = (): AppData => {
+  const data = createSeedData();
+  data.transactions = [{ ...data.transactions[0]!, categoryId: "missing" }];
+  return data;
+};
+
 describe("createStorageAdapter", () => {
   it("returns the seed when nothing is stored", () => {
     const adapter = createStorageAdapter(new FakeStorage());
-    expect(adapter.load().isDemo).toBe(true);
+    const result = adapter.load();
+    expect(result.status).toBe("seeded");
+    expect(result.data.isDemo).toBe(true);
   });
 
   it("saves and loads valid data", () => {
@@ -45,9 +53,12 @@ describe("createStorageAdapter", () => {
     const adapter = createStorageAdapter(storage);
     const data = customData();
 
-    adapter.save(data);
+    expect(adapter.save(data)).toEqual({ ok: true });
     expect(storage.raw(STORAGE_KEY)).toBe(exportData(data));
-    expect(adapter.load()).toEqual(data);
+
+    const loaded = adapter.load();
+    expect(loaded.status).toBe("ok");
+    expect(loaded.data).toEqual(data);
   });
 
   it("clears the stored data", () => {
@@ -56,7 +67,7 @@ describe("createStorageAdapter", () => {
     adapter.save(customData());
     adapter.clear();
     expect(storage.raw(STORAGE_KEY)).toBeNull();
-    expect(adapter.load().isDemo).toBe(true);
+    expect(adapter.load().data.isDemo).toBe(true);
   });
 
   it("backs up malformed JSON without overwriting it and falls back to the seed", () => {
@@ -64,7 +75,9 @@ describe("createStorageAdapter", () => {
     storage.setItem(STORAGE_KEY, "{not json");
     const adapter = createStorageAdapter(storage);
 
-    expect(adapter.load().isDemo).toBe(true);
+    const result = adapter.load();
+    expect(result.status).toBe("recovered");
+    expect(result.data.isDemo).toBe(true);
     expect(storage.raw(CORRUPT_KEY)).toBe("{not json");
     expect(storage.raw(STORAGE_KEY)).toBe("{not json");
   });
@@ -74,19 +87,18 @@ describe("createStorageAdapter", () => {
     storage.setItem(STORAGE_KEY, JSON.stringify({ ...createSeedData(), version: 99 }));
     const adapter = createStorageAdapter(storage);
 
-    expect(adapter.load().isDemo).toBe(true);
+    const result = adapter.load();
+    expect(result.status).toBe("recovered");
     expect(storage.raw(CORRUPT_KEY)).not.toBeNull();
     expect(storage.raw(STORAGE_KEY)).toContain('"version":99');
   });
 
   it("backs up data with a dangling categoryId", () => {
     const storage = new FakeStorage();
-    const broken = createSeedData();
-    broken.transactions = [{ ...broken.transactions[0]!, categoryId: "missing" }];
-    storage.setItem(STORAGE_KEY, JSON.stringify(broken));
+    storage.setItem(STORAGE_KEY, JSON.stringify(invalidData()));
     const adapter = createStorageAdapter(storage);
 
-    expect(adapter.load().isDemo).toBe(true);
+    expect(adapter.load().status).toBe("recovered");
     expect(storage.raw(CORRUPT_KEY)).not.toBeNull();
   });
 
@@ -98,13 +110,33 @@ describe("createStorageAdapter", () => {
     expect(storage.raw(CORRUPT_KEY)).toBeNull();
   });
 
+  it("refuses to persist invalid data and writes nothing", () => {
+    const storage = new FakeStorage();
+    const adapter = createStorageAdapter(storage);
+
+    expect(adapter.save(invalidData())).toEqual({ ok: false, reason: "invalid" });
+    expect(storage.raw(STORAGE_KEY)).toBeNull();
+  });
+
+  it("reports quota when storage rejects the write", () => {
+    const quota: StorageLike = {
+      getItem: () => null,
+      setItem: () => {
+        const error = new Error("full");
+        error.name = "QuotaExceededError";
+        throw error;
+      },
+      removeItem: () => undefined,
+    };
+    const adapter = createStorageAdapter(quota);
+    expect(adapter.save(customData())).toEqual({ ok: false, reason: "quota" });
+  });
+
   it("works without storage (unavailable)", () => {
     const adapter = createStorageAdapter(null);
-    expect(adapter.load().isDemo).toBe(true);
-    expect(() => {
-      adapter.save(customData());
-      adapter.clear();
-    }).not.toThrow();
+    expect(adapter.load().status).toBe("unavailable");
+    expect(adapter.save(customData())).toEqual({ ok: false, reason: "unavailable" });
+    expect(() => adapter.clear()).not.toThrow();
   });
 
   it("survives a storage that throws on every access", () => {
@@ -120,10 +152,8 @@ describe("createStorageAdapter", () => {
       },
     };
     const adapter = createStorageAdapter(throwing);
-    expect(adapter.load().isDemo).toBe(true);
-    expect(() => {
-      adapter.save(customData());
-      adapter.clear();
-    }).not.toThrow();
+    expect(adapter.load().status).toBe("unavailable");
+    expect(adapter.save(customData())).toEqual({ ok: false, reason: "unavailable" });
+    expect(() => adapter.clear()).not.toThrow();
   });
 });
