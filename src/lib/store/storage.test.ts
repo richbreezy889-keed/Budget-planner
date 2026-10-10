@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AppData } from "../types";
 import { createSeedData } from "./seed";
-import { CORRUPT_KEY, STORAGE_KEY, createStorageAdapter, type StorageLike } from "./storage";
+import { CORRUPT_PREFIX, STORAGE_KEY, createStorageAdapter, type StorageLike } from "./storage";
 import { exportData } from "./validate";
 
 class FakeStorage implements StorageLike {
@@ -20,8 +20,20 @@ class FakeStorage implements StorageLike {
     this.map.delete(key);
   }
 
+  key(index: number): string | null {
+    return Array.from(this.map.keys())[index] ?? null;
+  }
+
+  get length(): number {
+    return this.map.size;
+  }
+
   raw(key: string): string | null {
     return this.getItem(key);
+  }
+
+  corruptKeys(): string[] {
+    return Array.from(this.map.keys()).filter((key) => key.startsWith(CORRUPT_PREFIX));
   }
 }
 
@@ -39,6 +51,10 @@ const invalidData = (): AppData => {
   data.transactions = [{ ...data.transactions[0]!, categoryId: "missing" }];
   return data;
 };
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("createStorageAdapter", () => {
   it("returns the seed when nothing is stored", () => {
@@ -70,7 +86,7 @@ describe("createStorageAdapter", () => {
     expect(adapter.load().data.isDemo).toBe(true);
   });
 
-  it("backs up malformed JSON without overwriting it and falls back to the seed", () => {
+  it("backs up malformed JSON and falls back to the seed", () => {
     const storage = new FakeStorage();
     storage.setItem(STORAGE_KEY, "{not json");
     const adapter = createStorageAdapter(storage);
@@ -78,7 +94,10 @@ describe("createStorageAdapter", () => {
     const result = adapter.load();
     expect(result.status).toBe("recovered");
     expect(result.data.isDemo).toBe(true);
-    expect(storage.raw(CORRUPT_KEY)).toBe("{not json");
+
+    const backups = storage.corruptKeys();
+    expect(backups).toHaveLength(1);
+    expect(storage.raw(backups[0]!)).toBe("{not json");
     expect(storage.raw(STORAGE_KEY)).toBe("{not json");
   });
 
@@ -89,7 +108,7 @@ describe("createStorageAdapter", () => {
 
     const result = adapter.load();
     expect(result.status).toBe("recovered");
-    expect(storage.raw(CORRUPT_KEY)).not.toBeNull();
+    expect(storage.corruptKeys()).toHaveLength(1);
     expect(storage.raw(STORAGE_KEY)).toContain('"version":99');
   });
 
@@ -99,7 +118,7 @@ describe("createStorageAdapter", () => {
     const adapter = createStorageAdapter(storage);
 
     expect(adapter.load().status).toBe("recovered");
-    expect(storage.raw(CORRUPT_KEY)).not.toBeNull();
+    expect(storage.corruptKeys()).toHaveLength(1);
   });
 
   it("does not create a corrupt backup for valid data", () => {
@@ -107,7 +126,51 @@ describe("createStorageAdapter", () => {
     const adapter = createStorageAdapter(storage);
     adapter.save(customData());
     adapter.load();
-    expect(storage.raw(CORRUPT_KEY)).toBeNull();
+    expect(storage.corruptKeys()).toHaveLength(0);
+  });
+
+  it("names corrupt backups with an ISO timestamp", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-02T03:04:05.000Z"));
+    const storage = new FakeStorage();
+    storage.setItem(STORAGE_KEY, "{not json");
+    const adapter = createStorageAdapter(storage);
+
+    adapter.load();
+    expect(storage.raw(`${CORRUPT_PREFIX}2026-01-02T03:04:05.000Z`)).toBe("{not json");
+  });
+
+  it("does not overwrite an existing corrupt backup", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-02T03:04:05.000Z"));
+    const storage = new FakeStorage();
+    const existing = `${CORRUPT_PREFIX}2026-01-02T03:04:05.000Z`;
+    storage.setItem(existing, "old");
+    storage.setItem(STORAGE_KEY, "{not json");
+    const adapter = createStorageAdapter(storage);
+
+    adapter.load();
+    expect(storage.raw(existing)).toBe("old");
+
+    const fresh = storage.corruptKeys().filter((key) => key !== existing);
+    expect(fresh).toHaveLength(1);
+    expect(storage.raw(fresh[0]!)).toBe("{not json");
+  });
+
+  it("keeps only the newest three corrupt backups", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-04T00:00:00.000Z"));
+    const storage = new FakeStorage();
+    const oldest = `${CORRUPT_PREFIX}2020-01-01T00:00:00.000Z`;
+    storage.setItem(oldest, "x");
+    storage.setItem(`${CORRUPT_PREFIX}2020-01-02T00:00:00.000Z`, "x");
+    storage.setItem(`${CORRUPT_PREFIX}2020-01-03T00:00:00.000Z`, "x");
+    storage.setItem(STORAGE_KEY, "{not json");
+    const adapter = createStorageAdapter(storage);
+
+    adapter.load();
+    expect(storage.corruptKeys()).toHaveLength(3);
+    expect(storage.raw(oldest)).toBeNull();
   });
 
   it("refuses to persist invalid data and writes nothing", () => {
@@ -127,6 +190,8 @@ describe("createStorageAdapter", () => {
         throw error;
       },
       removeItem: () => undefined,
+      key: () => null,
+      length: 0,
     };
     const adapter = createStorageAdapter(quota);
     expect(adapter.save(customData())).toEqual({ ok: false, reason: "quota" });
@@ -148,6 +213,12 @@ describe("createStorageAdapter", () => {
         throw new Error("nope");
       },
       removeItem() {
+        throw new Error("nope");
+      },
+      key() {
+        throw new Error("nope");
+      },
+      get length(): number {
         throw new Error("nope");
       },
     };
