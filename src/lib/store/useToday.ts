@@ -13,7 +13,8 @@ function toLocalISODate(date: Date): ISODate {
  * The local calendar date as `YYYY-MM-DD`, or null before mount.
  * It is null during SSR and the first render because the server runs in UTC and
  * would otherwise render a different date than the browser. Re-checks when the
- * tab becomes visible again, so the date rolls over if the tab stays open past midnight.
+ * tab becomes visible again, and schedules a check just after each local midnight,
+ * so the date rolls over even if the tab stays open across midnight.
  */
 export function useToday(): ISODate | null {
   const [today, setToday] = useState<ISODate | null>(null);
@@ -23,12 +24,34 @@ export function useToday(): ISODate | null {
 
     update();
 
+    let midnightTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleMidnightCheck = () => {
+      const now = new Date();
+      const nextMidnight = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1,
+        0,
+        0,
+        1,
+        0,
+      );
+      midnightTimer = setTimeout(() => {
+        update();
+        scheduleMidnightCheck();
+      }, nextMidnight.getTime() - now.getTime());
+    };
+    scheduleMidnightCheck();
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") update();
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      if (midnightTimer !== undefined) clearTimeout(midnightTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   return today;

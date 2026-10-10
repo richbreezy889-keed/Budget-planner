@@ -69,4 +69,33 @@ describe("useToday", () => {
 
     expect(result.current).toBe("2026-10-05");
   });
+
+  it("rolls over the date when the tab stays open across midnight", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 5, 23, 59, 0));
+
+    const { result } = renderHook(() => useToday());
+    expect(result.current).toBe("2026-10-05");
+
+    act(() => {
+      vi.advanceTimersByTime(2 * 60 * 1000);
+    });
+
+    expect(result.current).toBe("2026-10-06");
+  });
+
+  it("clears its midnight timer on unmount", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 5, 23, 59, 0));
+    const clearSpy = vi.spyOn(globalThis, "clearTimeout");
+
+    const { unmount } = renderHook(() => useToday());
+    unmount();
+
+    expect(clearSpy).toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(2 * 60 * 1000);
+    });
+  });
 });
