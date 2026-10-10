@@ -70,6 +70,14 @@ function requireId(value: unknown, label: string): string | null {
   return isNonEmptyString(value) ? null : `${label} id is required`;
 }
 
+function requireExisting<T extends { id: string }>(
+  list: T[],
+  targetId: string,
+  label: string,
+): string | null {
+  return list.some((row) => row.id === targetId) ? null : `${label} not found: "${targetId}".`;
+}
+
 function hasCategory(state: AppData, categoryId: string): boolean {
   return state.categories.some((row) => row.id === categoryId);
 }
@@ -95,7 +103,9 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
     }
     case "updateIncome": {
       const error =
-        firstError(incomeRecordErrors(action.item)) ?? requireId(action.item.id, "income");
+        firstError(incomeRecordErrors(action.item)) ??
+        requireId(action.item.id, "income") ??
+        requireExisting(state.incomeEntries, action.item.id, "income");
       if (error) return refuse(error);
       return ok({ ...state, incomeEntries: updateBy(state.incomeEntries, action.item) });
     }
@@ -115,6 +125,7 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
       const error =
         firstError(transactionRecordErrors(action.item)) ??
         requireId(action.item.id, "transaction") ??
+        requireExisting(state.transactions, action.item.id, "transaction") ??
         (hasCategory(state, action.item.categoryId)
           ? null
           : `Unknown category: "${action.item.categoryId}".`);
@@ -131,7 +142,9 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
     }
     case "updateCategory": {
       const error =
-        firstError(categoryRecordErrors(action.item)) ?? requireId(action.item.id, "category");
+        firstError(categoryRecordErrors(action.item)) ??
+        requireId(action.item.id, "category") ??
+        requireExisting(state.categories, action.item.id, "category");
       if (error) return refuse(error);
       return ok({ ...state, categories: updateBy(state.categories, action.item) });
     }
@@ -151,6 +164,7 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
       const error =
         firstError(billRecordErrors(action.item)) ??
         requireId(action.item.id, "bill") ??
+        requireExisting(state.bills, action.item.id, "bill") ??
         (hasCategory(state, action.item.categoryId)
           ? null
           : `Unknown category: "${action.item.categoryId}".`);
@@ -166,7 +180,10 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
       return ok({ ...state, goals: addById(state.goals, action.item) });
     }
     case "updateGoal": {
-      const error = firstError(goalRecordErrors(action.item)) ?? requireId(action.item.id, "goal");
+      const error =
+        firstError(goalRecordErrors(action.item)) ??
+        requireId(action.item.id, "goal") ??
+        requireExisting(state.goals, action.item.id, "goal");
       if (error) return refuse(error);
       return ok({ ...state, goals: updateBy(state.goals, action.item) });
     }

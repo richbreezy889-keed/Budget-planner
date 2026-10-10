@@ -371,3 +371,51 @@ describe("record validation", () => {
     expect(before.incomeEntries).toHaveLength(2);
   });
 });
+
+describe("not-found refusals", () => {
+  it("refuses updateIncome when the id does not exist", () => {
+    const before = seed();
+    const result = appReducer(before, { type: "updateIncome", item: income({ id: "nope" }) });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("not found");
+    expect(before.incomeEntries.map((row) => row.id)).toEqual(["i1", "i2"]);
+  });
+
+  it("refuses updateTransaction when the id does not exist", () => {
+    const before = seed();
+    const result = appReducer(before, {
+      type: "updateTransaction",
+      item: transaction({ id: "nope" }),
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("not found");
+    expect(before.transactions.map((row) => row.id)).toContain("t2");
+  });
+
+  it("refuses updateCategory when the id does not exist", () => {
+    const before = seed();
+    const result = appReducer(before, {
+      type: "updateCategory",
+      item: category({ id: "nope" }),
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("not found");
+    expect(before.categories.map((row) => row.id)).toContain("fun");
+  });
+
+  it("refuses updateBill when the id does not exist", () => {
+    const before = seed();
+    const result = appReducer(before, { type: "updateBill", item: bill({ id: "nope" }) });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("not found");
+    expect(before.bills.map((row) => row.id)).toContain("b1");
+  });
+
+  it("refuses updateGoal when the id does not exist", () => {
+    const before = seed();
+    const result = appReducer(before, { type: "updateGoal", item: goal({ id: "nope" }) });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("not found");
+    expect(before.goals.map((row) => row.id)).toEqual(["g1", "g2", "g3"]);
+  });
+});
