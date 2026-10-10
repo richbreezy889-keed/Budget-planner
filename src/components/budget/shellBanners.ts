@@ -4,6 +4,7 @@ import type { AppView } from "@/lib/store/useAppView";
 export interface ShellBanner {
   tone: "info" | "warn" | "danger";
   message: string;
+  link?: { to: "/start"; label: string };
 }
 
 const saveErrorMessages: Record<string, string> = {
@@ -17,7 +18,11 @@ export function buildShellBanners(view: AppView | null, status: StorageStatus): 
   if (view === null) return [];
   const banners: ShellBanner[] = [];
   if (view.isDemo) {
-    banners.push({ tone: "info", message: "You are viewing demo data (read-only)." });
+    banners.push({
+      tone: "info",
+      message: "You are viewing demo data (read-only).",
+      link: { to: "/start", label: "Start fresh" },
+    });
   }
   if (status.load === "recovered") {
     banners.push({

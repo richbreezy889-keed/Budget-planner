@@ -14,6 +14,7 @@ import { Route as BillsRouteImport } from './routes/bills'
 import { Route as BudgetsRouteImport } from './routes/budgets'
 import { Route as BufferRouteImport } from './routes/buffer'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as StartRouteImport } from './routes/start'
 import { Route as TrendsRouteImport } from './routes/trends'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TrendsRoute = TrendsRouteImport.update({
   id: '/trends',
   path: '/trends',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/budgets': typeof BudgetsRoute
   '/buffer': typeof BufferRoute
   '/settings': typeof SettingsRoute
+  '/start': typeof StartRoute
   '/trends': typeof TrendsRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/budgets': typeof BudgetsRoute
   '/buffer': typeof BufferRoute
   '/settings': typeof SettingsRoute
+  '/start': typeof StartRoute
   '/trends': typeof TrendsRoute
 }
 export interface FileRoutesById {
@@ -70,13 +78,16 @@ export interface FileRoutesById {
   '/budgets': typeof BudgetsRoute
   '/buffer': typeof BufferRoute
   '/settings': typeof SettingsRoute
+  '/start': typeof StartRoute
   '/trends': typeof TrendsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/bills' | '/budgets' | '/buffer' | '/settings' | '/trends'
+  fullPaths:
+    '/' | '/bills' | '/budgets' | '/buffer' | '/settings' | '/start' | '/trends'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/bills' | '/budgets' | '/buffer' | '/settings' | '/trends'
+  to:
+    '/' | '/bills' | '/budgets' | '/buffer' | '/settings' | '/start' | '/trends'
   id:
     | '__root__'
     | '/'
@@ -84,6 +95,7 @@ export interface FileRouteTypes {
     | '/budgets'
     | '/buffer'
     | '/settings'
+    | '/start'
     | '/trends'
   fileRoutesById: FileRoutesById
 }
@@ -93,6 +105,7 @@ export interface RootRouteChildren {
   BudgetsRoute: typeof BudgetsRoute
   BufferRoute: typeof BufferRoute
   SettingsRoute: typeof SettingsRoute
+  StartRoute: typeof StartRoute
   TrendsRoute: typeof TrendsRoute
 }
 
@@ -133,6 +146,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trends': {
       id: '/trends'
       path: '/trends'
@@ -149,6 +169,7 @@ const rootRouteChildren: RootRouteChildren = {
   BudgetsRoute: BudgetsRoute,
   BufferRoute: BufferRoute,
   SettingsRoute: SettingsRoute,
+  StartRoute: StartRoute,
   TrendsRoute: TrendsRoute,
 }
 export const routeTree = rootRouteImport

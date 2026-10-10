@@ -23,9 +23,13 @@ describe("buildShellBanners", () => {
     expect(buildShellBanners(null, status())).toEqual([]);
   });
 
-  it("flags demo data", () => {
+  it("flags demo data with a start-fresh link", () => {
     expect(buildShellBanners(view(true), status())).toEqual([
-      { tone: "info", message: "You are viewing demo data (read-only)." },
+      {
+        tone: "info",
+        message: "You are viewing demo data (read-only).",
+        link: { to: "/start", label: "Start fresh" },
+      },
     ]);
   });
 
@@ -66,7 +70,11 @@ describe("buildShellBanners", () => {
 
   it("combines demo and recovered banners", () => {
     expect(buildShellBanners(view(true), status({ load: "recovered" }))).toEqual([
-      { tone: "info", message: "You are viewing demo data (read-only)." },
+      {
+        tone: "info",
+        message: "You are viewing demo data (read-only).",
+        link: { to: "/start", label: "Start fresh" },
+      },
       { tone: "warn", message: "Your saved data could not be read. A backup was kept." },
     ]);
   });

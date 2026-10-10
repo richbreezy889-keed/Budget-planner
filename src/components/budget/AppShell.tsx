@@ -88,6 +88,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className={`rounded-[10px] px-3 py-2 text-[12px] font-medium ${bannerTone[banner.tone]}`}
               >
                 {banner.message}
+                {banner.link && (
+                  <Link to={banner.link.to} className="ml-2 underline underline-offset-2">
+                    {banner.link.label}
+                  </Link>
+                )}
               </div>
             ))}
           </div>
