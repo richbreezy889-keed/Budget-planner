@@ -9,17 +9,11 @@ import type {
   IncomeEntry,
   ISODate,
   RecurringBill,
-  Settings,
   Transaction,
   WeekStartDay,
 } from "./types";
 
 export type SafeStatus = "safe" | "caution" | "danger";
-export type AllocationKey = "Essentials" | "Savings" | "Goals" | "Flexible" | "Buffer";
-export interface Allocation {
-  key: AllocationKey;
-  amount: number;
-}
 
 export function weeklyEquivalent(amount: number, period: BillPeriod): number {
   if (period === "weekly") return amount;
@@ -49,78 +43,6 @@ export function weeklyPlannedByType(categories: Category[], bills: RecurringBill
 
 export function weeklyEssentials(categories: Category[], bills: RecurringBill[]): number {
   return weeklyPlannedByType(categories, bills).essential;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function weeklyBillsTotal(_bills: RecurringBill[]): number {
-  return 389.31;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function incomeForWeek(_entries: IncomeEntry[], _weekStart: string): number {
-  return 825;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function flexibleBudgetForWeek(_categories: Category[]): number {
-  return 260;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function safeToSpend(
-  _settings: Settings,
-  _entries: IncomeEntry[],
-  _transactions: Transaction[],
-  _categories: Category[],
-  _bills: RecurringBill[],
-  _goals: Goal[],
-): number {
-  return 186;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function safeStatus(_safeToSpend: number, _flexibleBudget: number): SafeStatus {
-  return "safe";
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function weeklyWaterfall(
-  _income: number,
-  _categories: Category[],
-  _bills: RecurringBill[],
-  _goals: Goal[],
-): Allocation[] {
-  return [
-    { key: "Essentials", amount: 405 },
-    { key: "Savings", amount: 130 },
-    { key: "Goals", amount: 80 },
-    { key: "Flexible", amount: 130 },
-    { key: "Buffer", amount: 80 },
-  ];
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function bufferBalance(
-  _settings: Settings,
-  _entries: IncomeEntry[],
-  _transactions: Transaction[],
-): number {
-  return 2915;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function bufferChangeThisWeek(_settings: Settings, _entries: IncomeEntry[]): number {
-  return 80;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function runwayWeeks(_bufferBalance: number, _baselineWeeklyIncome: number): number {
-  return 3.6;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function rollingAverageIncome(_entries: IncomeEntry[], weeks: number): number {
-  return weeks === 4 ? 909 : 896;
 }
 
 export function spentInCategory(
@@ -158,23 +80,8 @@ export function categoryProgress(spent: number, budgetAmount: number): number {
   return Math.min(1, ratio);
 }
 
-/** @deprecated mock, removed in Task 3 */
-export function weeklyTotalForType(type: CategoryType, _categories: Category[]): number {
-  return ({ essential: 405, savings: 129, flexible: 130 } as const)[type];
-}
-
 export function goalProgress(goal: Goal): number {
   return goal.savedAmount / goal.targetAmount;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function goalWeeklyContribution(goal: Goal): number {
-  return ({ g1: 40, g2: 25, g3: 15 } as Record<string, number>)[goal.id] ?? 0;
-}
-
-/** @deprecated mock, removed in Task 3 */
-export function weeksToGoal(goal: Goal): number {
-  return ({ g1: 17, g2: 41, g3: 3 } as Record<string, number>)[goal.id] ?? 0;
 }
 
 function parseLocalDate(iso: ISODate): Date {

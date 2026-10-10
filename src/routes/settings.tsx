@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { MainSkeleton } from "@/components/budget/AppShell";
 import { PageHeader, Panel } from "@/components/budget/Panel";
-import { settings } from "@/lib/mockData";
+import { useAppView } from "@/lib/store/useAppView";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/settings")({
 });
 
 const field =
-  "w-full rounded-[10px] bg-muted px-3 py-2.5 text-[13px] text-foreground ring-1 ring-border outline-none focus:ring-primary/50";
+  "w-full rounded-[10px] bg-muted px-3 py-2.5 text-[13px] text-foreground ring-1 ring-border outline-none focus:ring-primary/50 disabled:opacity-100";
 
 function Row({ label, hint, children }: { label: string; hint: string; children: ReactNode }) {
   return (
@@ -33,13 +34,17 @@ function Row({ label, hint, children }: { label: string; hint: string; children:
   );
 }
 
-function SettingsPage() {
+export function SettingsPage() {
+  const view = useAppView();
+  if (view === null) return <MainSkeleton />;
+  const settings = view.data.settings;
+
   return (
     <div>
       <PageHeader title="Settings" />
       <Panel title="Planner">
         <Row label="Currency" hint="Used for all amounts">
-          <select className={field} defaultValue={settings.currency}>
+          <select className={field} value={settings.currency} disabled>
             <option>USD</option>
             <option>EUR</option>
             <option>GBP</option>
@@ -47,7 +52,7 @@ function SettingsPage() {
           </select>
         </Row>
         <Row label="Week starts on" hint="Defines your weekly period">
-          <select className={field} defaultValue={settings.weekStartDay}>
+          <select className={field} value={settings.weekStartDay} disabled>
             <option>Monday</option>
             <option>Sunday</option>
             <option>Saturday</option>
@@ -56,27 +61,38 @@ function SettingsPage() {
         <Row label="Baseline weekly income" hint="A conservative, lean-week figure">
           <input
             className={field}
-            defaultValue={settings.baselineWeeklyIncome}
+            value={settings.baselineWeeklyIncome}
+            disabled
             inputMode="decimal"
           />
         </Row>
         <Row label="Opening buffer balance" hint="Starting amount in your buffer">
           <input
             className={field}
-            defaultValue={settings.openingBufferBalance}
+            value={settings.openingBufferBalance}
+            disabled
             inputMode="decimal"
           />
         </Row>
       </Panel>
       <Panel title="Data" className="mt-6">
         <div className="flex flex-wrap gap-3">
-          <button className="rounded-[10px] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+          <button
+            className="rounded-[10px] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+            disabled
+          >
             Export JSON
           </button>
-          <button className="rounded-[10px] bg-muted px-4 py-2 text-sm ring-1 ring-border">
+          <button
+            className="rounded-[10px] bg-muted px-4 py-2 text-sm ring-1 ring-border disabled:opacity-60"
+            disabled
+          >
             Import JSON
           </button>
-          <button className="rounded-[10px] px-4 py-2 text-sm text-danger ring-1 ring-danger/40">
+          <button
+            className="rounded-[10px] px-4 py-2 text-sm text-danger ring-1 ring-danger/40 disabled:opacity-60"
+            disabled
+          >
             Reset
           </button>
         </div>
