@@ -1,3 +1,4 @@
+import { isValidCurrencyCode } from "../format";
 import type { AppData } from "../types";
 
 export type ValidationResult = { ok: true; data: AppData } | { ok: false; errors: string[] };
@@ -151,6 +152,23 @@ function validateGoal(item: unknown, label: string, errors: string[]): void {
 export function settingsRecordErrors(value: unknown): string[] {
   const errors: string[] = [];
   validateSettings(value, "settings", errors);
+  return errors;
+}
+
+/**
+ * Rules for settings the user is writing. Unlike the load validator this also
+ * requires a usable three-letter currency, so odd saved codes still load but
+ * cannot be saved anew.
+ */
+export function settingsWriteErrors(value: unknown): string[] {
+  const errors = settingsRecordErrors(value);
+  const currency =
+    typeof value === "object" && value !== null && !Array.isArray(value)
+      ? (value as Record<string, unknown>)["currency"]
+      : undefined;
+  if (!isValidCurrencyCode(currency)) {
+    errors.push("settings.currency must be a three-letter code");
+  }
   return errors;
 }
 

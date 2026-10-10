@@ -14,7 +14,7 @@ import {
   goalRecordErrors,
   incomeRecordErrors,
   isNonEmptyString,
-  settingsRecordErrors,
+  settingsWriteErrors,
   starterCategoryErrors,
   transactionRecordErrors,
 } from "./validate";
@@ -206,20 +206,20 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
       return ok({ ...state, goals: removeById(state.goals, action.id) });
 
     case "setSettings": {
-      const error = firstError(settingsRecordErrors(action.settings));
+      const error = firstError(settingsWriteErrors(action.settings));
       if (error) return refuse(error);
       return ok({ ...state, settings: { ...action.settings } });
     }
     case "replaceAll":
       return ok(action.data);
     case "startFresh": {
-      const error = firstError(settingsRecordErrors(action.settings));
+      const error = firstError(settingsWriteErrors(action.settings));
       if (error) return refuse(error);
       return ok(startFresh(action.settings));
     }
     case "startFreshWithCategories": {
       const error =
-        firstError(settingsRecordErrors(action.settings)) ??
+        firstError(settingsWriteErrors(action.settings)) ??
         starterCategoriesError(action.categories);
       if (error) return refuse(error);
       const fresh = startFresh(action.settings);

@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { MainSkeleton } from "@/components/budget/AppShell";
 import { PageHeader, Panel } from "@/components/budget/Panel";
+import { isValidCurrencyCode, normalizeCurrency } from "@/lib/format";
 import { parseMoneyInput } from "@/lib/moneyInput";
 import type { NewCategory } from "@/lib/store/reducer";
 import { starterCategories } from "@/lib/store/starter";
@@ -100,7 +101,7 @@ export function StartPage() {
 
   const baselineValue = parseMoneyInput(baseline);
   const bufferValue = parseMoneyInput(buffer);
-  const currencyInvalid = currency.trim() === "";
+  const currencyInvalid = !isValidCurrencyCode(normalizeCurrency(currency));
   const settingsValid = !currencyInvalid && baselineValue !== null && bufferValue !== null;
 
   const amountOf = (text: string): number | null =>
@@ -124,7 +125,7 @@ export function StartPage() {
     dispatch({
       type: "startFreshWithCategories",
       settings: {
-        currency: currency.trim(),
+        currency: normalizeCurrency(currency),
         weekStartDay,
         baselineWeeklyIncome: baselineValue ?? 0,
         openingBufferBalance: bufferValue ?? 0,
@@ -168,7 +169,7 @@ export function StartPage() {
               value={currency}
               list="starter-currencies"
               aria-label="Currency"
-              onChange={(event) => setCurrency(event.target.value)}
+              onChange={(event) => setCurrency(event.target.value.toUpperCase())}
               onBlur={() => touch("currency")}
             />
             <datalist id="starter-currencies">
@@ -178,7 +179,7 @@ export function StartPage() {
             </datalist>
           </Field>
           {touched["currency"] && currencyInvalid && (
-            <p className="text-[12px] text-danger">Enter a currency code.</p>
+            <p className="text-[12px] text-danger">Enter a three-letter currency code.</p>
           )}
           <Field label="Week starts on" hint="Defines your weekly period">
             <select

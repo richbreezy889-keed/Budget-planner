@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { MainSkeleton } from "@/components/budget/AppShell";
 import { PageHeader, Panel } from "@/components/budget/Panel";
+import { isValidCurrencyCode, normalizeCurrency } from "@/lib/format";
 import { parseMoneyInput } from "@/lib/moneyInput";
 import { useAppData } from "@/lib/store/context";
 import { useAppView } from "@/lib/store/useAppView";
@@ -69,7 +70,7 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
 
   const baselineValue = parseMoneyInput(baseline);
   const bufferValue = parseMoneyInput(buffer);
-  const currencyInvalid = currency.trim() === "";
+  const currencyInvalid = !isValidCurrencyCode(normalizeCurrency(currency));
   const valid = !currencyInvalid && baselineValue !== null && bufferValue !== null;
   const showErrors = attempted && !valid;
 
@@ -82,7 +83,7 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
     dispatch({
       type: "setSettings",
       settings: {
-        currency: currency.trim(),
+        currency: normalizeCurrency(currency),
         weekStartDay,
         baselineWeeklyIncome: baselineValue ?? 0,
         openingBufferBalance: bufferValue ?? 0,
@@ -106,7 +107,7 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
             disabled={isDemo}
             aria-label="Currency"
             onChange={(event) => {
-              setCurrency(event.target.value);
+              setCurrency(event.target.value.toUpperCase());
               setSaved(false);
             }}
           />
@@ -116,7 +117,7 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
             ))}
           </datalist>
           {showErrors && currencyInvalid && (
-            <div className="mt-1 text-[12px] text-danger">Enter a currency code.</div>
+            <div className="mt-1 text-[12px] text-danger">Enter a three-letter currency code.</div>
           )}
         </Row>
         <Row label="Week starts on" hint="Defines your weekly period">

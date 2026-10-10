@@ -49,6 +49,14 @@ describe("validateAppData", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("still loads a previously saved odd currency", () => {
+    const data = seed();
+    data.settings = { ...data.settings, currency: "Tsh." };
+    const result = validateAppData(data);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.settings.currency).toBe("Tsh.");
+  });
+
   it("rejects non-objects", () => {
     expect(errorsOf(validateAppData(null)).length).toBeGreaterThan(0);
     expect(errorsOf(validateAppData("nope")).length).toBeGreaterThan(0);

@@ -247,6 +247,29 @@ describe("settings, replaceAll and startFresh", () => {
     expect(next.settings).toEqual(settings);
   });
 
+  it("refuses a currency Intl rejects or that is not three letters", () => {
+    const base: Settings = {
+      currency: "USD",
+      weekStartDay: "Monday",
+      baselineWeeklyIncome: 700,
+      openingBufferBalance: 100,
+    };
+    for (const currency of ["Tsh.", "TZ", "Tanzanian shilling", ""]) {
+      const setResult = appReducer(seed(), {
+        type: "setSettings",
+        settings: { ...base, currency },
+      });
+      expect(setResult.ok).toBe(false);
+      if (!setResult.ok) expect(setResult.error).toContain("currency");
+
+      const freshResult = appReducer(seed(), {
+        type: "startFresh",
+        settings: { ...base, currency },
+      });
+      expect(freshResult.ok).toBe(false);
+    }
+  });
+
   it("replaceAll swaps in the provided dataset", () => {
     const replacement = seed();
     replacement.isDemo = false;
@@ -350,6 +373,16 @@ describe("startFreshWithCategories", () => {
       categories: [template()],
     });
     expect(result.ok).toBe(false);
+  });
+
+  it("refuses a currency Intl rejects", () => {
+    const result = appReducer(seed(), {
+      type: "startFreshWithCategories",
+      settings: { ...settings, currency: "Tsh." },
+      categories: [template()],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("currency");
   });
 
   it("leaves the whole state unchanged when any category is rejected", () => {
