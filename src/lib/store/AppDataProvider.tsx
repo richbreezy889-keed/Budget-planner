@@ -11,7 +11,7 @@ import {
 import type { AppData } from "../types";
 import { AppDataContext, type AppDataContextValue, type StorageStatus } from "./context";
 import { appReducer, type AppAction } from "./reducer";
-import { createSeedData } from "./seed";
+import { createSeedData, startFresh } from "./seed";
 import { STORAGE_KEY, localStorageAdapter, type StorageAdapter } from "./storage";
 import { importData } from "./validate";
 
@@ -92,6 +92,16 @@ export function AppDataProvider({
     return () => clearTimeout(handle);
   }, [state.data, hydrated, persist, debounceMs]);
 
+  // Clear every record, snapshotting the current data first so it can be recovered.
+  const resetData = useCallback(() => {
+    const current = latestDataRef.current;
+    storage.backup?.(current);
+    const fresh = startFresh(current.settings);
+    latestDataRef.current = fresh;
+    dispatch({ type: "replaceAll", data: fresh });
+    persist(fresh);
+  }, [persist, storage]);
+
   // Flush before the page is hidden or unloaded so nothing is lost.
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -121,8 +131,8 @@ export function AppDataProvider({
   }, []);
 
   const value = useMemo<AppDataContextValue>(
-    () => ({ data: state.data, dispatch, hydrated, error: state.error, storageStatus }),
-    [state.data, state.error, hydrated, storageStatus],
+    () => ({ data: state.data, dispatch, hydrated, error: state.error, storageStatus, resetData }),
+    [state.data, state.error, hydrated, storageStatus, resetData],
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

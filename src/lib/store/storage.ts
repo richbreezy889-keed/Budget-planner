@@ -16,6 +16,8 @@ export interface StorageAdapter {
   /** Persists validated data, reporting why a write was rejected when it was. */
   save(data: AppData): SaveResult;
   clear(): void;
+  /** Best-effort snapshot of the current data, kept for recovery. Optional. */
+  backup?(data: AppData): boolean;
 }
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key" | "length">;
@@ -23,6 +25,8 @@ export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem" | "
 export const STORAGE_KEY = "mngs:v1";
 export const CORRUPT_PREFIX = "mngs:v1:corrupt:";
 const MAX_CORRUPT_BACKUPS = 3;
+export const BACKUP_PREFIX = "mngs:v1:backup:";
+const MAX_BACKUPS = 5;
 
 function isQuotaError(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
@@ -116,6 +120,32 @@ export function createStorageAdapter(storage: StorageLike | null): StorageAdapte
         storage.removeItem(STORAGE_KEY);
       } catch {
         // Ignore unavailable storage.
+      }
+    },
+
+    backup(data: AppData): boolean {
+      if (!storage) return false;
+      try {
+        const existing = listKeys(storage)
+          .filter((key) => key.startsWith(BACKUP_PREFIX))
+          .sort();
+        const taken = new Set(existing);
+        const stamp = new Date().toISOString();
+        let key = `${BACKUP_PREFIX}${stamp}`;
+        let counter = 1;
+        while (taken.has(key)) {
+          key = `${BACKUP_PREFIX}${stamp}-${counter}`;
+          counter += 1;
+        }
+        storage.setItem(key, exportData(data));
+        const keys = [...existing, key].sort();
+        while (keys.length > MAX_BACKUPS) {
+          const oldest = keys.shift();
+          if (oldest) storage.removeItem(oldest);
+        }
+        return true;
+      } catch {
+        return false;
       }
     },
   };

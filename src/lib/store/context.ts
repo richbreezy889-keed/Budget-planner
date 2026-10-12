@@ -22,6 +22,8 @@ export interface AppDataContextValue {
   error: string | null;
   /** Load/save health of the backing storage. */
   storageStatus: StorageStatus;
+  /** Wipes all data back to an empty, non-demo state (keeps current settings). */
+  resetData: () => void;
 }
 
 export const AppDataContext = createContext<AppDataContextValue | null>(null);

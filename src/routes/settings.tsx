@@ -88,12 +88,15 @@ export function SettingsPage() {
 }
 
 function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Settings }) {
-  const { data, dispatch } = useAppData();
+  const { data, dispatch, resetData } = useAppData();
   const [currency, setCurrency] = useState(settings.currency);
   const [weekStartDay, setWeekStartDay] = useState<WeekStartDay>(settings.weekStartDay);
   const [baseline, setBaseline] = useState(String(settings.baselineWeeklyIncome));
   const [buffer, setBuffer] = useState(String(settings.openingBufferBalance));
   const [saved, setSaved] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [resetDone, setResetDone] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const [importState, setImportState] = useState<ImportState>({ kind: "idle" });
   const [lastExportName, setLastExportName] = useState<string | null>(null);
@@ -184,6 +187,14 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
     if (importState.kind !== "confirm") return;
     dispatch({ type: "replaceAll", data: importState.data });
     setImportState({ kind: "done" });
+  };
+
+  const confirmReset = () => {
+    if (confirmText.trim() !== "RESET") return;
+    resetData();
+    setConfirmText("");
+    setResetOpen(false);
+    setResetDone(true);
   };
 
   return (
@@ -366,9 +377,68 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
         )}
 
         {importState.kind === "done" && (
-          <p className="mt-4 text-[13px] text-safe">Imported. Your data has been replaced.</p>
+          <p className="mt-3 text-[13px] text-safe">Imported. Your data has been replaced.</p>
         )}
       </Panel>
+
+      {!isDemo && (
+        <Panel title="Reset" className="mt-6">
+          <p className="text-[13px] text-muted-foreground">
+            Erase every income, transaction, category, bill and goal. A backup of your current data
+            is saved first, and your settings are kept.
+          </p>
+          {resetOpen ? (
+            <div className="mt-4 rounded-[10px] bg-danger/10 px-4 py-3 text-[13px] ring-1 ring-danger/30">
+              <p className="font-medium text-danger">
+                This erases everything. Type RESET to confirm.
+              </p>
+              <input
+                className={`${field} mt-2`}
+                value={confirmText}
+                aria-label="Type RESET to confirm"
+                autoComplete="off"
+                onChange={(event) => setConfirmText(event.target.value)}
+              />
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={confirmText.trim() !== "RESET"}
+                  onClick={confirmReset}
+                  className="rounded-[10px] bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-danger/90 disabled:opacity-60"
+                >
+                  Reset everything
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetOpen(false);
+                    setConfirmText("");
+                  }}
+                  className="rounded-[10px] px-4 py-2 text-sm ring-1 ring-border"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setResetOpen(true);
+                setResetDone(false);
+              }}
+              className="mt-4 rounded-[10px] bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-danger/90"
+            >
+              Reset all data
+            </button>
+          )}
+          {resetDone && (
+            <p className="mt-3 text-[13px] text-safe" role="status">
+              All data reset.
+            </p>
+          )}
+        </Panel>
+      )}
     </div>
   );
 }

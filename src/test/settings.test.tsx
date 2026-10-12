@@ -22,7 +22,8 @@ function spyAdapter(initial: AppData | null = null) {
   const clear = vi.fn(() => {
     stored = null;
   });
-  const adapter: StorageAdapter = { load, save, clear };
+  const backup = vi.fn(() => true);
+  const adapter: StorageAdapter = { load, save, clear, backup };
   return adapter;
 }
 
@@ -258,5 +259,61 @@ describe("Settings data export", () => {
     });
 
     expect(screen.getByText("Could not copy to clipboard.")).toBeInTheDocument();
+  });
+});
+
+describe("Settings reset", () => {
+  const populated = () => {
+    const data = realData();
+    data.categories = [
+      { id: "c1", name: "Food", type: "flexible", budgetAmount: 50, budgetPeriod: "weekly" },
+    ];
+    data.transactions = [{ id: "t1", date: "2026-10-05", amount: 10, categoryId: "c1", note: "x" }];
+    return data;
+  };
+
+  it("backs up and clears all data after typing RESET", () => {
+    const data = populated();
+    const adapter = spyAdapter(data);
+    render(wrap(adapter));
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset all data" }));
+    const confirm = screen.getByLabelText("Type RESET to confirm");
+    const confirmButton = screen.getByRole("button", { name: "Reset everything" });
+    expect(confirmButton).toBeDisabled();
+
+    fireEvent.change(confirm, { target: { value: "RESET" } });
+    expect(confirmButton).toBeEnabled();
+    fireEvent.click(confirmButton);
+
+    expect(screen.getByText("All data reset.")).toBeInTheDocument();
+    expect(adapter.backup).toHaveBeenCalledWith(
+      expect.objectContaining({ transactions: data.transactions }),
+    );
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    const lastSaved = vi.mocked(adapter.save).mock.calls.at(-1)?.[0] as AppData;
+    expect(lastSaved.transactions).toHaveLength(0);
+    expect(lastSaved.categories).toHaveLength(0);
+    expect(lastSaved.isDemo).toBe(false);
+  });
+
+  it("does not reset or back up when cancelled", () => {
+    const adapter = spyAdapter(populated());
+    render(wrap(adapter));
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset all data" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByLabelText("Type RESET to confirm")).not.toBeInTheDocument();
+    expect(adapter.backup).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Reset all data" })).toBeInTheDocument();
+  });
+
+  it("hides reset in demo mode", () => {
+    render(wrap(spyAdapter()));
+
+    expect(screen.queryByRole("button", { name: "Reset all data" })).not.toBeInTheDocument();
   });
 });
