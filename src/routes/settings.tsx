@@ -42,6 +42,11 @@ type ImportState =
   | { kind: "confirm"; data: AppData; summary: BackupSummary }
   | { kind: "done" };
 
+type Message = { kind: "success" | "error"; text: string } | null;
+
+/** Object URLs are revoked only after this long so slow downloads still complete. */
+const REVOKE_DELAY_MS = 10000;
+
 function readFileText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -91,6 +96,8 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
   const [saved, setSaved] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const [importState, setImportState] = useState<ImportState>({ kind: "idle" });
+  const [lastExportName, setLastExportName] = useState<string | null>(null);
+  const [copyMessage, setCopyMessage] = useState<Message>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const baselineValue = parseMoneyInput(baseline);
@@ -118,17 +125,33 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
   };
 
   const downloadBackup = () => {
+    const name = backupFileName(new Date());
     if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return;
     const blob = new Blob([backupJson(data)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = backupFileName(new Date());
+    anchor.download = name;
     anchor.rel = "noopener";
     document.body.append(anchor);
     anchor.click();
     anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    window.setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
+    setLastExportName(name);
+  };
+
+  const copyBackup = async () => {
+    const json = backupJson(data);
+    try {
+      const clipboard = typeof navigator === "undefined" ? undefined : navigator.clipboard;
+      if (!clipboard || typeof clipboard.writeText !== "function") {
+        throw new Error("Clipboard is not available.");
+      }
+      await clipboard.writeText(json);
+      setCopyMessage({ kind: "success", text: "Copied" });
+    } catch {
+      setCopyMessage({ kind: "error", text: "Could not copy to clipboard." });
+    }
   };
 
   const onFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -264,6 +287,13 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
           >
             Export JSON
           </button>
+          <button
+            type="button"
+            onClick={copyBackup}
+            className="rounded-[10px] bg-muted px-4 py-2 text-sm ring-1 ring-border hover:bg-muted/80"
+          >
+            Copy backup to clipboard
+          </button>
           <label className="cursor-pointer rounded-[10px] bg-muted px-4 py-2 text-sm ring-1 ring-border hover:bg-muted/80">
             Import JSON
             <input
@@ -276,6 +306,18 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
             />
           </label>
         </div>
+
+        {lastExportName && (
+          <p className="mt-3 text-[13px] text-muted-foreground">Backup file: {lastExportName}</p>
+        )}
+        {copyMessage && (
+          <p
+            className={`mt-3 text-[13px] ${copyMessage.kind === "error" ? "text-danger" : "text-safe"}`}
+            role={copyMessage.kind === "error" ? "alert" : "status"}
+          >
+            {copyMessage.text}
+          </p>
+        )}
 
         {importState.kind === "error" && (
           <div className="mt-4 rounded-[10px] bg-danger/10 px-4 py-3 text-[13px] text-danger">

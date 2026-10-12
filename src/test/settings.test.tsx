@@ -210,3 +210,53 @@ describe("Settings data import", () => {
     expect(vi.mocked(adapter.save)).not.toHaveBeenCalled();
   });
 });
+
+describe("Settings data export", () => {
+  it("names the exported backup file and revokes the URL later", () => {
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const createObjectURL = vi.fn(() => "blob:fake");
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL });
+
+    render(wrap(spyAdapter(realData())));
+    fireEvent.click(screen.getByRole("button", { name: "Export JSON" }));
+
+    expect(screen.getByText("Backup file: mngs-backup-2026-10-19.json")).toBeInTheDocument();
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:fake");
+  });
+
+  it("confirms a successful clipboard copy", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(wrap(spyAdapter(realData())));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy backup to clipboard" }));
+    });
+
+    expect(screen.getByText("Copied")).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith(backupJson(realData()));
+  });
+
+  it("reports when the clipboard is blocked", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: () => Promise.reject(new Error("blocked")) },
+    });
+
+    render(wrap(spyAdapter(realData())));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy backup to clipboard" }));
+    });
+
+    expect(screen.getByText("Could not copy to clipboard.")).toBeInTheDocument();
+  });
+});
