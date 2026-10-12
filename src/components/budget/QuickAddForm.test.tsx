@@ -165,4 +165,29 @@ describe("QuickAddForm", () => {
     const lastSaved = vi.mocked(adapter.save).mock.calls.at(-1)?.[0] as AppData;
     expect(lastSaved.transactions[0]?.amount).toBe(55);
   });
+
+  it("shows the reducer error when a spending entry is refused", () => {
+    render(
+      <AppDataProvider storage={realAdapter()}>
+        <QuickAddForm
+          categories={[
+            {
+              id: "ghost",
+              name: "Ghost",
+              type: "flexible",
+              budgetAmount: 0,
+              budgetPeriod: "weekly",
+            },
+          ]}
+          isDemo={false}
+          weekStartDay="Monday"
+          today="2026-10-19"
+        />
+      </AppDataProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to week" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/Unknown category/);
+  });
 });
