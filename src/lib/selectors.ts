@@ -126,11 +126,13 @@ export interface ThisWeekView {
   flexibleSpent: number;
   safeToSpend: number;
   status: SafeStatus;
-  /** The status shown to the user: a lean week (income short of essentials)
-   * downgrades "safe" to "caution" so it is never displayed as all-clear. */
+  /** The status shown to the user: income short of essentials, or flexible spending
+   * leaning on the buffer, downgrades "safe" to "caution" so it is never all-clear. */
   displayStatus: SafeStatus;
-  /** True when a safe week was downgraded because income is short of essentials. */
+  /** True when income is short of essentials, so the week is shown as lean. */
   isLean: boolean;
+  /** True when a safe week was downgraded because flexible spending leans on the buffer. */
+  fundedFromBuffer: boolean;
   flexibleShortfall: number;
   activity: WeekActivityItem[];
 }
@@ -180,22 +182,27 @@ export function thisWeekView(data: AppData, today: ISODate): ThisWeekView {
     .map(({ item }) => item);
 
   const status = safeToSpendStatus(safeToSpend, plan.flexible);
-  const isLean = status === "safe" && incomeLogged > 0 && waterfall.shortfall.essentials > 0;
+  const hasIncome = incomeLogged > 0;
+  const isLean = hasIncome && status !== "danger" && waterfall.shortfall.essentials > 0;
+  const fundedFromBuffer =
+    hasIncome && status === "safe" && !isLean && waterfall.shortfall.flexible > 0;
+  const displayStatus: SafeStatus = isLean || fundedFromBuffer ? "caution" : status;
 
   return {
     weekStart: start,
     weekEnd: end,
     incomeLogged,
     incomeEntryCount: data.incomeEntries.filter((entry) => inWeek(entry.date)).length,
-    hasIncome: incomeLogged > 0,
+    hasIncome,
     plan,
     waterfall,
     flexibleBudget: plan.flexible,
     flexibleSpent,
     safeToSpend,
     status,
-    displayStatus: isLean ? "caution" : status,
+    displayStatus,
     isLean,
+    fundedFromBuffer,
     flexibleShortfall: waterfall.shortfall.flexible,
     activity: sorted,
   };

@@ -23,6 +23,7 @@ const base: ThisWeekView = {
   status: "caution",
   displayStatus: "caution",
   isLean: true,
+  fundedFromBuffer: false,
   flexibleShortfall: 60,
   activity: [],
 };

@@ -243,8 +243,27 @@ describe("thisWeekView", () => {
     expect(view.hasIncome).toBe(true);
     expect(view.status).toBe("safe");
     expect(view.waterfall.shortfall.essentials).toBeGreaterThan(0);
+    expect(view.waterfall.shortfall.flexible).toBeGreaterThan(0);
     expect(view.displayStatus).toBe("caution");
     expect(view.isLean).toBe(true);
+    expect(view.fundedFromBuffer).toBe(false);
+  });
+
+  it("funds flexible from the buffer before calling a safe week all-clear", () => {
+    const data = smallData();
+    data.incomeEntries = [
+      { id: "i1", date: "2026-03-09", amount: 450, source: "Payroll", note: "Salary" },
+    ];
+
+    const view = thisWeekView(data, "2026-03-09");
+
+    expect(view.incomeLogged).toBe(450);
+    expect(view.waterfall.shortfall.essentials).toBe(0);
+    expect(view.waterfall.shortfall.flexible).toBeGreaterThan(0);
+    expect(view.status).toBe("safe");
+    expect(view.displayStatus).toBe("caution");
+    expect(view.isLean).toBe(false);
+    expect(view.fundedFromBuffer).toBe(true);
   });
 
   it("keeps displayStatus safe when essentials are fully funded", () => {
@@ -264,6 +283,7 @@ describe("thisWeekView", () => {
     expect(view.status).toBe("safe");
     expect(view.displayStatus).toBe("safe");
     expect(view.isLean).toBe(false);
+    expect(view.fundedFromBuffer).toBe(false);
   });
 
   it("keeps a caution status when flexible is low but essentials are funded", () => {
@@ -309,6 +329,7 @@ describe("thisWeekView", () => {
     expect(view.status).toBe("danger");
     expect(view.displayStatus).toBe("danger");
     expect(view.isLean).toBe(false);
+    expect(view.fundedFromBuffer).toBe(false);
   });
 
   it("does not downgrade a safe status when there is no income yet", () => {
@@ -322,6 +343,7 @@ describe("thisWeekView", () => {
     expect(view.status).toBe("safe");
     expect(view.displayStatus).toBe("safe");
     expect(view.isLean).toBe(false);
+    expect(view.fundedFromBuffer).toBe(false);
   });
 
   it("reports an empty week for blank data", () => {

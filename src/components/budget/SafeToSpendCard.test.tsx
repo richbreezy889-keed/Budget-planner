@@ -22,6 +22,7 @@ const base: ThisWeekView = {
   status: "safe",
   displayStatus: "caution",
   isLean: true,
+  fundedFromBuffer: false,
   flexibleShortfall: 60,
   activity: [],
 };
@@ -42,6 +43,17 @@ describe("SafeToSpendCard", () => {
       <SafeToSpendCard week={{ ...base, isLean: true, displayStatus: "caution" }} currency="USD" />,
     );
     expect(screen.getByText(/Lean week/)).toBeTruthy();
+    expect(screen.queryByText(/Ease off/)).toBeNull();
+  });
+
+  it("shows 'Funded from buffer' when a safe week leans on the buffer", () => {
+    render(
+      <SafeToSpendCard
+        week={{ ...base, isLean: false, fundedFromBuffer: true, displayStatus: "caution" }}
+        currency="USD"
+      />,
+    );
+    expect(screen.getByText(/Funded from buffer/)).toHaveClass("text-warn");
     expect(screen.queryByText(/Ease off/)).toBeNull();
   });
 

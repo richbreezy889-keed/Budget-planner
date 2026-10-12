@@ -10,7 +10,11 @@ const statusMap = {
 
 export function SafeToSpendCard({ week, currency }: { week: ThisWeekView; currency: string }) {
   const s = statusMap[week.displayStatus];
-  const statusText = week.isLean ? "Lean week" : s.text;
+  const statusText = week.isLean
+    ? "Lean week"
+    : week.fundedFromBuffer
+      ? "Funded from buffer"
+      : s.text;
   return (
     <div className="glass relative overflow-hidden rounded-[20px] p-6 sm:p-7">
       <div className="relative flex flex-wrap items-start justify-between gap-6">
