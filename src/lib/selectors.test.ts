@@ -378,8 +378,26 @@ describe("bufferView", () => {
     expect(view.avg4VsBaseline).toBe("below");
     expect(view.avg8VsBaseline).toBe("below");
     expect(view.series).toHaveLength(12);
-    expect(view.series[11]).toEqual({ weekStart: "2026-03-09", income: 250, spending: 25 });
-    expect(view.series[10]).toEqual({ weekStart: "2026-03-02", income: 400, spending: 1360 });
+    expect(view.series[11]).toEqual({
+      weekStart: "2026-03-09",
+      income: 250,
+      spending: 25,
+      tracked: true,
+    });
+    expect(view.series[10]).toEqual({
+      weekStart: "2026-03-02",
+      income: 400,
+      spending: 1360,
+      tracked: true,
+    });
+  });
+
+  it("marks weeks before the first entry as untracked", () => {
+    const view = bufferView(smallData(), "2026-03-09");
+
+    expect(view.series[9]?.tracked).toBe(false);
+    expect(view.series[10]?.tracked).toBe(true);
+    expect(view.series[11]?.tracked).toBe(true);
   });
 
   it("compares avg4 against the baseline", () => {
@@ -425,6 +443,7 @@ describe("bufferView", () => {
     expect(view.avg4VsBaseline).toBeNull();
     expect(view.avg8VsBaseline).toBeNull();
     expect(view.series).toHaveLength(12);
+    expect(view.series.every((point) => !point.tracked)).toBe(true);
   });
 
   it("is unchanged by demoView's whole-week shift", () => {
@@ -726,8 +745,18 @@ describe("trendsView", () => {
     const view = trendsView(smallData(), "2026-03-09");
 
     expect(view.series).toHaveLength(12);
-    expect(view.series[11]).toEqual({ weekStart: "2026-03-09", income: 250, spending: 25 });
-    expect(view.series[10]).toEqual({ weekStart: "2026-03-02", income: 400, spending: 1360 });
+    expect(view.series[11]).toEqual({
+      weekStart: "2026-03-09",
+      income: 250,
+      spending: 25,
+      tracked: true,
+    });
+    expect(view.series[10]).toEqual({
+      weekStart: "2026-03-02",
+      income: 400,
+      spending: 1360,
+      tracked: true,
+    });
 
     expect(view.rollup).toHaveLength(4);
     expect(view.rollup[3]).toEqual({

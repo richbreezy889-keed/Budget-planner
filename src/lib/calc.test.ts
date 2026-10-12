@@ -269,10 +269,32 @@ describe("weeklySeries", () => {
   it("returns N weeks oldest to newest including the current week", () => {
     const series = weeklySeries(incomeEntries, transactions, 2, "2026-09-28", true);
     expect(series).toHaveLength(2);
-    expect(series[0]).toEqual({ weekStart: "2026-09-21", income: 0, spending: 0 });
+    expect(series[0]).toEqual({
+      weekStart: "2026-09-21",
+      income: 0,
+      spending: 0,
+      tracked: false,
+    });
     expect(series[1]?.weekStart).toBe("2026-09-28");
     expect(series[1]?.income).toBeCloseTo(825, 6);
     expect(series[1]?.spending).toBeCloseTo(237.9, 6);
+    expect(series[1]?.tracked).toBe(true);
+  });
+
+  it("marks weeks before the first entry as untracked", () => {
+    const series = weeklySeries(incomeEntries, transactions, 4, "2026-09-28", true);
+    expect(series.map((point) => point.weekStart)).toEqual([
+      "2026-09-07",
+      "2026-09-14",
+      "2026-09-21",
+      "2026-09-28",
+    ]);
+    expect(series.map((point) => point.tracked)).toEqual([false, false, false, true]);
+  });
+
+  it("leaves every week untracked when nothing has been logged", () => {
+    const series = weeklySeries([], [], 2, "2026-09-28", true);
+    expect(series.map((point) => point.tracked)).toEqual([false, false]);
   });
 
   it("excludes the current week when asked", () => {
@@ -287,7 +309,9 @@ describe("weeklySeries", () => {
 
   it("returns a single current-week point", () => {
     const series = weeklySeries(incomeEntries, transactions, 1, "2026-09-28", true);
-    expect(series).toEqual([{ weekStart: "2026-09-28", income: 825, spending: 237.9 }]);
+    expect(series).toEqual([
+      { weekStart: "2026-09-28", income: 825, spending: 237.9, tracked: true },
+    ]);
   });
 });
 

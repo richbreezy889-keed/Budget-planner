@@ -69,7 +69,7 @@ export function BufferPage() {
         />
       </div>
       <Panel title="Weekly income · last 12 weeks" className="mt-6">
-        <IncomeLineChart series={buffer.series} baseline={buffer.baseline} />
+        <IncomeLineChart series={buffer.series} baseline={buffer.baseline} currency={currency} />
       </Panel>
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
         <Stat

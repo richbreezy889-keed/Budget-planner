@@ -146,6 +146,23 @@ export interface WeeklySeriesPoint {
   weekStart: ISODate;
   income: number;
   spending: number;
+  /** False for weeks before the first logged entry, so charts can leave them blank. */
+  tracked: boolean;
+}
+
+function firstTrackedWeek(
+  entries: IncomeEntry[],
+  transactions: Transaction[],
+  asOfWeekStart: ISODate,
+): ISODate | null {
+  const dates = [
+    ...entries.map((entry) => entry.date),
+    ...transactions.map((transaction) => transaction.date),
+  ];
+  if (dates.length === 0) return null;
+  return dates
+    .map((date) => weekStartRelativeTo(date, asOfWeekStart))
+    .reduce((min, week) => (week < min ? week : min));
 }
 
 export function weeklySeries(
@@ -155,6 +172,7 @@ export function weeklySeries(
   asOfWeekStart: ISODate,
   includeCurrentWeek = true,
 ): WeeklySeriesPoint[] {
+  const firstTracked = firstTrackedWeek(entries, transactions, asOfWeekStart);
   const points: WeeklySeriesPoint[] = [];
   for (let i = weeks - 1; i >= 0; i -= 1) {
     const offset = includeCurrentWeek ? i : i + 1;
@@ -163,6 +181,7 @@ export function weeklySeries(
       weekStart: start,
       income: incomeInWeek(entries, start),
       spending: spentInWeek(transactions, null, start),
+      tracked: firstTracked !== null && start >= firstTracked,
     });
   }
   return points;
