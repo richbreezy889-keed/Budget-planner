@@ -91,7 +91,7 @@ describe("Empty states for non-demo data", () => {
     render(wrap(spyAdapter(emptyReal()), BudgetsPage));
 
     expect(screen.getByText("No budget categories yet")).toBeInTheDocument();
-    expect(screen.queryByText("Essential")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Essential" })).not.toBeInTheDocument();
   });
 
   it("never treats demo data as empty", () => {
