@@ -46,7 +46,12 @@ export function ThisWeek() {
       <WeekNotice week={week} currency={currency} />
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <WaterfallBar week={week} currency={currency} />
-        <QuickAddForm categories={view.data.categories} />
+        <QuickAddForm
+          categories={view.data.categories}
+          isDemo={view.isDemo}
+          weekStartDay={view.data.settings.weekStartDay}
+          today={view.today}
+        />
       </div>
       <ActivityList week={week} currency={currency} categories={view.data.categories} />
     </div>

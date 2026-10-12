@@ -48,7 +48,7 @@ describe("App routing", () => {
     expect(text).toContain("Safe to spend this week");
     expect(text).toContain("Income logged");
     expect(text).toContain("Where this week's income goes");
-    expect(text).toContain("Adding entries comes next");
+    expect(text).toContain("Start fresh to add entries");
     expect(text).toContain("This week's activity");
   });
 
