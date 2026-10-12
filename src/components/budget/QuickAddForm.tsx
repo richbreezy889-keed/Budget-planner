@@ -4,7 +4,7 @@ import { parseMoneyInput } from "@/lib/moneyInput";
 import { useAppData } from "@/lib/store/context";
 import { appReducer, type AppAction } from "@/lib/store/reducer";
 import { isISODate } from "@/lib/store/validate";
-import type { Category, ISODate, WeekStartDay } from "@/lib/types";
+import type { Category, IncomeEntry, ISODate, Transaction, WeekStartDay } from "@/lib/types";
 import { weekLabel } from "@/lib/weekLabel";
 import { Panel } from "./Panel";
 
@@ -16,16 +16,24 @@ const COOLDOWN_MS = 600;
 type Mode = "income" | "spend";
 type Message = { kind: "success" | "error"; text: string } | null;
 
+/** The existing record being edited, opened through the quick-add form. */
+export type EditingEntry =
+  { kind: "income"; entry: IncomeEntry } | { kind: "spend"; transaction: Transaction };
+
 export function QuickAddForm({
   categories,
   isDemo,
   weekStartDay,
   today,
+  editing,
+  onCancel,
 }: {
   categories: Category[];
   isDemo: boolean;
   weekStartDay: WeekStartDay;
   today: ISODate;
+  editing?: EditingEntry | undefined;
+  onCancel?: (() => void) | undefined;
 }) {
   const { data, dispatch } = useAppData();
   const [mode, setMode] = useState<Mode>("spend");
@@ -43,6 +51,19 @@ export function QuickAddForm({
     if (categoryId === "" && categories.length > 0) setCategoryId(categories[0]?.id ?? "");
   }, [categories, categoryId]);
 
+  useEffect(() => {
+    if (!editing) return;
+    setMode(editing.kind);
+    setAmount(
+      String(editing.kind === "income" ? editing.entry.amount : editing.transaction.amount),
+    );
+    setDate(editing.kind === "income" ? editing.entry.date : editing.transaction.date);
+    setNote(editing.kind === "income" ? editing.entry.note : editing.transaction.note);
+    if (editing.kind === "spend") setCategoryId(editing.transaction.categoryId);
+    setAttempted(false);
+    setMessage(null);
+  }, [editing]);
+
   useEffect(
     () => () => {
       if (cooldownRef.current !== undefined) clearTimeout(cooldownRef.current);
@@ -56,11 +77,26 @@ export function QuickAddForm({
   const categoryMissing = mode === "spend" && categoryId === "";
   const valid = !amountInvalid && !dateInvalid && !categoryMissing;
 
-  const reset = () => {
+  const resetFields = () => {
     setAmount("");
     setNote("");
     setDate(today);
     setCategoryId(categories[0]?.id ?? "");
+  };
+
+  const cancelEdit = () => {
+    resetFields();
+    setMode("spend");
+    setAttempted(false);
+    setMessage(null);
+    onCancel?.();
+  };
+
+  const finish = (text: string) => {
+    setMessage({ kind: "success", text });
+    setSubmitting(true);
+    amountRef.current?.focus();
+    cooldownRef.current = setTimeout(() => setSubmitting(false), COOLDOWN_MS);
   };
 
   const submit = (event: FormEvent) => {
@@ -72,6 +108,36 @@ export function QuickAddForm({
       return;
     }
     const value = amountValue ?? 0;
+    const label = weekLabel(date, weekStartDay);
+
+    if (editing) {
+      const action: AppAction =
+        editing.kind === "income"
+          ? {
+              type: "updateIncome",
+              item: {
+                id: editing.entry.id,
+                date,
+                amount: value,
+                source: editing.entry.source,
+                note,
+              },
+            }
+          : {
+              type: "updateTransaction",
+              item: { id: editing.transaction.id, date, amount: value, categoryId, note },
+            };
+      const result = appReducer(data, action);
+      if (!result.ok) {
+        setMessage({ kind: "error", text: result.error });
+        return;
+      }
+      dispatch(action);
+      cancelEdit();
+      finish(`Updated entry in week of ${label}`);
+      return;
+    }
+
     const action: AppAction =
       mode === "income"
         ? {
@@ -85,12 +151,8 @@ export function QuickAddForm({
       return;
     }
     dispatch(action);
-    const label = weekLabel(date, weekStartDay);
-    reset();
-    setMessage({ kind: "success", text: `Added to week of ${label}` });
-    setSubmitting(true);
-    amountRef.current?.focus();
-    cooldownRef.current = setTimeout(() => setSubmitting(false), COOLDOWN_MS);
+    resetFields();
+    finish(`Added to week of ${label}`);
   };
 
   const switchMode = (next: Mode) => {
@@ -101,7 +163,7 @@ export function QuickAddForm({
 
   return (
     <Panel
-      title="Quick add"
+      title={editing ? "Edit entry" : "Quick add"}
       action={
         isDemo ? (
           <span className="text-[11px] text-muted-foreground">Start fresh to add entries</span>
@@ -118,7 +180,7 @@ export function QuickAddForm({
               className={`flex-1 rounded-[10px] px-4 py-2 text-sm font-medium ring-1 ring-border disabled:opacity-60 ${
                 mode === option ? "bg-primary text-primary-foreground ring-primary" : "bg-muted"
               }`}
-              disabled={isDemo}
+              disabled={isDemo || editing !== undefined}
               onClick={() => switchMode(option)}
             >
               {option === "income" ? "Income" : "Spend"}
@@ -197,13 +259,24 @@ export function QuickAddForm({
           }}
         />
 
-        <button
-          type="submit"
-          disabled={isDemo || submitting}
-          className="self-start rounded-[10px] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Add to week
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={isDemo || submitting}
+            className="rounded-[10px] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {editing ? "Save changes" : "Add to week"}
+          </button>
+          {editing && !isDemo && (
+            <button
+              type="button"
+              className="rounded-[10px] px-4 py-2 text-sm ring-1 ring-border"
+              onClick={cancelEdit}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
 
         {message && (
           <p

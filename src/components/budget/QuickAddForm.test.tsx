@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppDataProvider } from "@/lib/store/AppDataProvider";
 import { createSeedData, startFresh } from "@/lib/store/seed";
 import type { StorageAdapter } from "@/lib/store/storage";
+import type { AppData } from "@/lib/types";
 import { QuickAddForm } from "./QuickAddForm";
 
 const categories = [
@@ -30,9 +31,21 @@ function realAdapter(): StorageAdapter {
   const data = startFresh({
     currency: "USD",
     weekStartDay: "Monday",
-    baselineWeeklyIncome: 100,
+    baselineWeeklyIncome: 500,
     openingBufferBalance: 0,
   });
+  data.categories = [
+    {
+      id: "c1",
+      name: "Groceries",
+      type: "flexible",
+      budgetAmount: 200,
+      budgetPeriod: "weekly",
+    },
+  ];
+  data.transactions = [
+    { id: "t1", date: "2026-10-20", amount: 40, categoryId: "c1", note: "Food" },
+  ];
   return {
     load: vi.fn(() => ({ data, status: "seeded" as const })),
     save: vi.fn(() => ({ ok: true as const })),
@@ -112,5 +125,44 @@ describe("QuickAddForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Add to week" }));
     expect(screen.getByText("Enter an amount greater than zero.")).toBeInTheDocument();
+  });
+
+  it("edits an existing spending entry through the same form", () => {
+    const adapter = realAdapter();
+    const onCancel = vi.fn();
+    render(
+      <AppDataProvider storage={adapter}>
+        <QuickAddForm
+          categories={categories}
+          isDemo={false}
+          weekStartDay="Monday"
+          today="2026-10-19"
+          editing={{
+            kind: "spend",
+            transaction: {
+              id: "t1",
+              date: "2026-10-20",
+              amount: 40,
+              categoryId: "c1",
+              note: "Food",
+            },
+          }}
+          onCancel={onCancel}
+        />
+      </AppDataProvider>,
+    );
+
+    expect(screen.getByLabelText("Amount")).toHaveValue("40");
+    expect(screen.getByLabelText("Note")).toHaveValue("Food");
+
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "55" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(onCancel).toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    const lastSaved = vi.mocked(adapter.save).mock.calls.at(-1)?.[0] as AppData;
+    expect(lastSaved.transactions[0]?.amount).toBe(55);
   });
 });

@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { ActivityList } from "@/components/budget/ActivityList";
 import { MainSkeleton } from "@/components/budget/AppShell";
 import { EmptyState, PageHeader } from "@/components/budget/Panel";
-import { QuickAddForm } from "@/components/budget/QuickAddForm";
+import { QuickAddForm, type EditingEntry } from "@/components/budget/QuickAddForm";
 import { SafeToSpendCard } from "@/components/budget/SafeToSpendCard";
 import { WaterfallBar } from "@/components/budget/WaterfallBar";
 import { WeekNotice } from "@/components/budget/WeekNotice";
+import type { WeekActivityItem } from "@/lib/selectors";
 import { thisWeekView } from "@/lib/selectors";
+import { useAppData } from "@/lib/store/context";
 import { useAppView } from "@/lib/store/useAppView";
 
 export const Route = createFileRoute("/")({
@@ -25,10 +28,31 @@ export const Route = createFileRoute("/")({
 });
 
 export function ThisWeek() {
+  const { dispatch } = useAppData();
   const view = useAppView();
+  const [editing, setEditing] = useState<EditingEntry | null>(null);
   if (view === null) return <MainSkeleton />;
   const week = thisWeekView(view.data, view.today);
   const currency = view.data.settings.currency;
+
+  const startEdit = (item: WeekActivityItem) => {
+    if (item.kind === "income") {
+      const entry = view.data.incomeEntries.find((row) => row.id === item.id);
+      if (entry) setEditing({ kind: "income", entry });
+    } else {
+      const transaction = view.data.transactions.find((row) => row.id === item.id);
+      if (transaction) setEditing({ kind: "spend", transaction });
+    }
+  };
+
+  const deleteEntry = (item: WeekActivityItem) => {
+    dispatch(
+      item.kind === "income"
+        ? { type: "deleteIncome", id: item.id }
+        : { type: "deleteTransaction", id: item.id },
+    );
+  };
+
   if (!view.isDemo && week.flexibleBudget === 0) {
     return (
       <div>
@@ -51,9 +75,18 @@ export function ThisWeek() {
           isDemo={view.isDemo}
           weekStartDay={view.data.settings.weekStartDay}
           today={view.today}
+          {...(editing ? { editing } : {})}
+          onCancel={() => setEditing(null)}
         />
       </div>
-      <ActivityList week={week} currency={currency} categories={view.data.categories} />
+      <ActivityList
+        week={week}
+        currency={currency}
+        categories={view.data.categories}
+        isDemo={view.isDemo}
+        onEdit={startEdit}
+        onDelete={deleteEntry}
+      />
     </div>
   );
 }
