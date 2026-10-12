@@ -28,8 +28,11 @@ export interface AppDataContextValue {
   backups: BackupMeta[];
   /** Unreadable data preserved for recovery, newest first. */
   corruptBackups: BackupMeta[];
-  /** Replaces the current data with a stored backup; false when it is unreadable. */
-  restoreBackup: (id: string) => boolean;
+  /**
+   * Snapshots the current data, then replaces it with a stored backup. Refused
+   * when the snapshot is unreadable or the safety snapshot cannot be written.
+   */
+  restoreBackup: (id: string) => RestoreResult;
   /** Removes a stored backup. */
   deleteBackup: (id: string) => void;
   /** Reads the raw text of an unreadable backup, or null when missing. */
@@ -37,6 +40,10 @@ export interface AppDataContextValue {
   /** Removes a stored unreadable backup. */
   deleteCorrupt: (id: string) => void;
 }
+
+/** Why a restore was refused: the snapshot is unreadable, or safety could not be saved. */
+export type RestoreFailure = "unreadable" | "not-saved";
+export type RestoreResult = { ok: true } | { ok: false; reason: RestoreFailure };
 
 export const AppDataContext = createContext<AppDataContextValue | null>(null);
 

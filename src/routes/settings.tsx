@@ -122,6 +122,7 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
   const [resetOpen, setResetOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [resetDone, setResetDone] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const [recoveryMessage, setRecoveryMessage] = useState<Message>(null);
   const [attempted, setAttempted] = useState(false);
   const [importState, setImportState] = useState<ImportState>({ kind: "idle" });
@@ -235,11 +236,20 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
   };
 
   const restore = (id: string) => {
-    const ok = restoreBackup(id);
+    const result = restoreBackup(id);
+    setConfirmRestore(null);
     setRecoveryMessage(
-      ok
-        ? { kind: "success", text: "Backup restored." }
-        : { kind: "error", text: "Could not restore this backup." },
+      result.ok
+        ? {
+            kind: "success",
+            text: "Backup restored. Your previous data was saved as a new snapshot.",
+          }
+        : result.reason === "not-saved"
+          ? {
+              kind: "error",
+              text: "Could not save a safety snapshot, so nothing was changed.",
+            }
+          : { kind: "error", text: "Could not restore this backup." },
     );
   };
 
@@ -520,26 +530,52 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] bg-muted px-3 py-2 text-[13px]"
                 >
                   <span>Saved {label}</span>
-                  <span className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      className="rounded-[10px] px-3 py-1.5 ring-1 ring-border hover:bg-muted/80"
-                      aria-label={`Restore backup from ${label}`}
-                      onClick={() => restore(backup.id)}
-                    >
-                      Restore
-                    </button>
-                    <button
-                      type="button"
-                      className="text-danger hover:underline"
-                      aria-label={`Delete backup from ${label}`}
-                      onClick={() => {
-                        deleteBackup(backup.id);
-                        setRecoveryMessage(null);
-                      }}
-                    >
-                      Delete
-                    </button>
+                  <span className="flex flex-wrap items-center gap-3">
+                    {confirmRestore === backup.id ? (
+                      <>
+                        <span className="text-muted-foreground">
+                          Replace all data with the snapshot from {label}? Your current data is
+                          saved as a new snapshot first.
+                        </span>
+                        <button
+                          type="button"
+                          className="rounded-[10px] bg-primary px-3 py-1.5 font-medium text-primary-foreground hover:bg-primary/90"
+                          aria-label={`Confirm restore from ${label}`}
+                          onClick={() => restore(backup.id)}
+                        >
+                          Confirm restore
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-[10px] px-3 py-1.5 ring-1 ring-border"
+                          onClick={() => setConfirmRestore(null)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="rounded-[10px] px-3 py-1.5 ring-1 ring-border hover:bg-muted/80"
+                          aria-label={`Restore backup from ${label}`}
+                          onClick={() => setConfirmRestore(backup.id)}
+                        >
+                          Restore
+                        </button>
+                        <button
+                          type="button"
+                          className="text-danger hover:underline"
+                          aria-label={`Delete backup from ${label}`}
+                          onClick={() => {
+                            deleteBackup(backup.id);
+                            setRecoveryMessage(null);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </span>
                 </li>
               );

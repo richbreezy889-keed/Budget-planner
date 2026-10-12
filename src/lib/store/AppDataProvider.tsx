@@ -9,7 +9,12 @@ import {
 } from "react";
 
 import type { AppData } from "../types";
-import { AppDataContext, type AppDataContextValue, type StorageStatus } from "./context";
+import {
+  AppDataContext,
+  type AppDataContextValue,
+  type RestoreResult,
+  type StorageStatus,
+} from "./context";
 import { appReducer, type AppAction } from "./reducer";
 import { createSeedData, startFresh } from "./seed";
 import { STORAGE_KEY, localStorageAdapter, type BackupMeta, type StorageAdapter } from "./storage";
@@ -111,17 +116,22 @@ export function AppDataProvider({
     refreshRecovery();
   }, [persist, refreshRecovery, storage]);
 
-  // Replace the current data with a stored backup, then persist it.
+  // Replace the current data with a stored backup, snapshotting the current data
+  // first so the restore can itself be undone. Refuses if that snapshot fails.
   const restoreBackup = useCallback(
-    (id: string): boolean => {
+    (id: string): RestoreResult => {
       const restored = storage.readBackup?.(id) ?? null;
-      if (!restored) return false;
+      if (!restored) return { ok: false, reason: "unreadable" };
+      if (storage.backup?.(latestDataRef.current) !== true) {
+        return { ok: false, reason: "not-saved" };
+      }
       latestDataRef.current = restored;
       dispatch({ type: "replaceAll", data: restored });
       persist(restored);
-      return true;
+      refreshRecovery();
+      return { ok: true };
     },
-    [persist, storage],
+    [persist, refreshRecovery, storage],
   );
 
   const deleteBackup = useCallback(

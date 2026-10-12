@@ -10,11 +10,6 @@ export interface LoadResult {
   status: LoadStatus;
 }
 
-export interface LoadResult {
-  data: AppData;
-  status: LoadStatus;
-}
-
 export interface BackupMeta {
   /** Identifies the backup; also the timestamp used in its storage key. */
   id: string;

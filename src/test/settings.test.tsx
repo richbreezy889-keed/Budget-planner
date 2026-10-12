@@ -33,8 +33,10 @@ function spyAdapter(
   const clear = vi.fn(() => {
     stored = null;
   });
+  let backupCount = 0;
   const backup = vi.fn((data: AppData) => {
-    backups.set("2026-01-01", data);
+    backupCount += 1;
+    backups.set(`safety-${backupCount}`, data);
     return true;
   });
   const listBackups = vi.fn(() =>
@@ -372,19 +374,40 @@ describe("Settings recovery", () => {
     return data;
   };
 
-  it("lists a snapshot and restores it", () => {
+  it("restores a snapshot after confirmation and snapshots the previous data", () => {
     const adapter = spyAdapter(realData(), [{ id: "2026-01-01", data: snapshot() }]);
     render(wrap(adapter));
 
     expect(screen.getByText(/^Saved /)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Restore backup from / }));
 
-    expect(screen.getByText("Backup restored.")).toBeInTheDocument();
+    expect(screen.getByText(/Your current data is saved/)).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: /^Confirm restore from / }));
+    });
+
+    expect(adapter.backup).toHaveBeenCalledWith(realData());
+    expect(
+      screen.getByText(/Backup restored\. Your previous data was saved as a new snapshot\./),
+    ).toBeInTheDocument();
     act(() => {
       vi.advanceTimersByTime(500);
     });
     const lastSaved = vi.mocked(adapter.save).mock.calls.at(-1)?.[0] as AppData;
     expect(lastSaved.categories).toEqual(snapshot().categories);
+  });
+
+  it("cancels a restore without changing anything", () => {
+    const adapter = spyAdapter(realData(), [{ id: "2026-01-01", data: snapshot() }]);
+    render(wrap(adapter));
+
+    fireEvent.click(screen.getByRole("button", { name: /^Restore backup from / }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByText(/Your current data is saved/)).not.toBeInTheDocument();
+    expect(adapter.backup).not.toHaveBeenCalled();
+    expect(vi.mocked(adapter.save)).not.toHaveBeenCalled();
   });
 
   it("deletes a snapshot", () => {
@@ -403,8 +426,56 @@ describe("Settings recovery", () => {
     render(wrap(adapter));
 
     fireEvent.click(screen.getByRole("button", { name: /^Restore backup from / }));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: /^Confirm restore from / }));
+    });
 
     expect(screen.getByRole("alert")).toHaveTextContent("Could not restore this backup.");
+    expect(adapter.backup).not.toHaveBeenCalled();
+  });
+
+  it("refuses to restore when the safety snapshot cannot be saved", () => {
+    const adapter = spyAdapter(realData(), [{ id: "2026-01-01", data: snapshot() }]);
+    adapter.backup = vi.fn(() => false);
+    render(wrap(adapter));
+
+    fireEvent.click(screen.getByRole("button", { name: /^Restore backup from / }));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: /^Confirm restore from / }));
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Could not save a safety snapshot, so nothing was changed.",
+    );
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(vi.mocked(adapter.save)).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /^Restore backup from / })).toBeInTheDocument();
+  });
+
+  it("re-syncs the settings fields after restoring a snapshot", () => {
+    const restored = snapshot();
+    restored.settings = {
+      currency: "TZS",
+      weekStartDay: "Sunday",
+      baselineWeeklyIncome: 800,
+      openingBufferBalance: 2000,
+    };
+    const adapter = spyAdapter(realData(), [{ id: "2026-01-01", data: restored }]);
+    render(wrap(adapter));
+
+    expect(screen.getByLabelText("Currency")).toHaveValue("USD");
+
+    fireEvent.click(screen.getByRole("button", { name: /^Restore backup from / }));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: /^Confirm restore from / }));
+    });
+
+    expect(screen.getByLabelText("Currency")).toHaveValue("TZS");
+    expect(screen.getByLabelText("Week starts on")).toHaveValue("Sunday");
+    expect(screen.getByLabelText("Baseline weekly income")).toHaveValue("800");
+    expect(screen.getByLabelText("Opening buffer balance")).toHaveValue("2000");
   });
 
   it("lists unreadable data even when there are no snapshots", () => {
