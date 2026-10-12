@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { MainSkeleton } from "@/components/budget/AppShell";
 import { PageHeader, Panel } from "@/components/budget/Panel";
 import { format, parseISO } from "date-fns";
@@ -104,6 +104,16 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
   const [lastExportName, setLastExportName] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState<Message>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Re-sync the fields whenever the stored settings change elsewhere (an import,
+  // a restore, a reset, or another tab) so Save can never write stale values back.
+  useEffect(() => {
+    setCurrency(settings.currency);
+    setWeekStartDay(settings.weekStartDay);
+    setBaseline(String(settings.baselineWeeklyIncome));
+    setBuffer(String(settings.openingBufferBalance));
+    setAttempted(false);
+  }, [settings]);
 
   const baselineValue = parseMoneyInput(baseline);
   const bufferValue = parseMoneyInput(buffer);

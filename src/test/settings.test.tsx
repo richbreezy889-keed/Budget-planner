@@ -5,7 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppDataProvider } from "@/lib/store/AppDataProvider";
 import { backupJson } from "@/lib/store/backup";
 import { createSeedData, startFresh } from "@/lib/store/seed";
-import type { LoadResult, SaveResult, StorageAdapter } from "@/lib/store/storage";
+import {
+  STORAGE_KEY,
+  type LoadResult,
+  type SaveResult,
+  type StorageAdapter,
+} from "@/lib/store/storage";
 import type { AppData } from "@/lib/types";
 import { SettingsPage } from "@/routes/settings";
 
@@ -385,5 +390,70 @@ describe("Settings recovery", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Restore backup from / }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("Could not restore this backup.");
+  });
+});
+
+describe("Settings form sync", () => {
+  it("re-syncs the fields after an import replaces the data", async () => {
+    const adapter = spyAdapter(realData());
+    render(wrap(adapter));
+
+    expect(screen.getByLabelText("Currency")).toHaveValue("USD");
+
+    const imported = startFresh({
+      currency: "TZS",
+      weekStartDay: "Saturday",
+      baselineWeeklyIncome: 800,
+      openingBufferBalance: 2000,
+    });
+    await chooseImportFile(
+      new File([backupJson(imported)], "good.json", { type: "application/json" }),
+    );
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Replace all data" }));
+    });
+
+    expect(screen.getByLabelText("Currency")).toHaveValue("TZS");
+    expect(screen.getByLabelText("Week starts on")).toHaveValue("Saturday");
+    expect(screen.getByLabelText("Baseline weekly income")).toHaveValue("800");
+    expect(screen.getByLabelText("Opening buffer balance")).toHaveValue("2000");
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    const lastSaved = vi.mocked(adapter.save).mock.calls.at(-1)?.[0] as AppData;
+    expect(lastSaved.settings).toEqual({
+      currency: "TZS",
+      weekStartDay: "Saturday",
+      baselineWeeklyIncome: 800,
+      openingBufferBalance: 2000,
+    });
+  });
+
+  it("re-syncs the fields when another tab changes the settings", () => {
+    render(wrap(spyAdapter(realData())));
+
+    expect(screen.getByLabelText("Currency")).toHaveValue("USD");
+
+    const otherTab = startFresh({
+      currency: "GBP",
+      weekStartDay: "Sunday",
+      baselineWeeklyIncome: 700,
+      openingBufferBalance: 300,
+    });
+    const event = new Event("storage") as StorageEvent;
+    Object.defineProperty(event, "key", { value: STORAGE_KEY });
+    Object.defineProperty(event, "newValue", { value: backupJson(otherTab) });
+    act(() => {
+      window.dispatchEvent(event);
+    });
+
+    expect(screen.getByLabelText("Currency")).toHaveValue("GBP");
+    expect(screen.getByLabelText("Week starts on")).toHaveValue("Sunday");
+    expect(screen.getByLabelText("Baseline weekly income")).toHaveValue("700");
+    expect(screen.getByLabelText("Opening buffer balance")).toHaveValue("300");
   });
 });
