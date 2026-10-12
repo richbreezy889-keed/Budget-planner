@@ -6,6 +6,9 @@ import {
   budgetsView,
   bufferView,
   demoView,
+  filterHistory,
+  groupHistoryByWeek,
+  historyEntries,
   thisWeekView,
   trendsView,
 } from "./selectors";
@@ -766,5 +769,115 @@ describe("trendsView", () => {
     );
     expect(shiftedView.rollup).toHaveLength(originalView.rollup.length);
     expect(shiftedView.rollup[3]!.month).toBe("2026-10");
+  });
+});
+
+const historyData = (): AppData => ({
+  version: 1,
+  isDemo: false,
+  settings: {
+    currency: "USD",
+    weekStartDay: "Monday",
+    baselineWeeklyIncome: 500,
+    openingBufferBalance: 1000,
+  },
+  incomeEntries: [
+    { id: "i1", date: "2026-03-05", amount: 500, source: "Payroll", note: "Salary" },
+    { id: "i2", date: "2026-02-20", amount: 80, source: "Side gig", note: "Side gig" },
+  ],
+  categories: [
+    { id: "c-food", name: "Food", type: "flexible", budgetAmount: 100, budgetPeriod: "weekly" },
+    { id: "c-rent", name: "Rent", type: "essential", budgetAmount: 900, budgetPeriod: "monthly" },
+    { id: "c-save", name: "Savings", type: "savings", budgetAmount: 50, budgetPeriod: "weekly" },
+  ],
+  transactions: [
+    { id: "t1", date: "2026-03-04", amount: 40, categoryId: "c-food", note: "Groceries" },
+    { id: "t2", date: "2026-02-25", amount: 900, categoryId: "c-rent", note: "Rent" },
+    { id: "t3", date: "2026-02-18", amount: 15, categoryId: "c-food", note: "Market run" },
+  ],
+  bills: [],
+  goals: [],
+});
+
+describe("historyEntries", () => {
+  it("merges income and spending newest first", () => {
+    const entries = historyEntries(historyData());
+    expect(entries.map((entry) => entry.id)).toEqual(["i1", "t1", "t2", "i2", "t3"]);
+    expect(entries[0]).toMatchObject({ kind: "income", id: "i1" });
+    expect(entries[1]).toMatchObject({ kind: "spend", id: "t1", categoryId: "c-food" });
+  });
+});
+
+describe("filterHistory", () => {
+  const entries = historyEntries(historyData());
+
+  it("keeps only income or only spending by type", () => {
+    expect(filterHistory(entries, { type: "income", categoryId: "all", query: "" })).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "i1" })]),
+    );
+    expect(
+      filterHistory(entries, { type: "income", categoryId: "all", query: "" }).every(
+        (entry) => entry.kind === "income",
+      ),
+    ).toBe(true);
+    expect(
+      filterHistory(entries, { type: "spend", categoryId: "all", query: "" }).every(
+        (entry) => entry.kind === "spend",
+      ),
+    ).toBe(true);
+  });
+
+  it("restricts a category filter to spending in that category", () => {
+    const filtered = filterHistory(historyEntries(historyData()), {
+      type: "all",
+      categoryId: "c-food",
+      query: "",
+    });
+    expect(filtered.map((entry) => entry.id)).toEqual(["t1", "t3"]);
+  });
+
+  it("searches notes case-insensitively", () => {
+    const filtered = filterHistory(historyEntries(historyData()), {
+      type: "all",
+      categoryId: "all",
+      query: "MARKET",
+    });
+    expect(filtered.map((entry) => entry.id)).toEqual(["t3"]);
+  });
+
+  it("combines type, category and search", () => {
+    const filtered = filterHistory(historyEntries(historyData()), {
+      type: "spend",
+      categoryId: "c-food",
+      query: "mark",
+    });
+    expect(filtered.map((entry) => entry.id)).toEqual(["t3"]);
+  });
+});
+
+describe("groupHistoryByWeek", () => {
+  it("groups into weeks newest first with matching start and end", () => {
+    const weeks = groupHistoryByWeek(historyEntries(historyData()), "Monday");
+
+    expect(weeks[0]).toMatchObject({ weekStart: "2026-03-02", weekEnd: "2026-03-08" });
+    expect(weeks[0]!.entries.map((entry) => entry.id)).toEqual(["i1", "t1"]);
+    expect(weeks.map((week) => week.weekStart)).toEqual(["2026-03-02", "2026-02-23", "2026-02-16"]);
+  });
+
+  it("keeps each entry in exactly one week", () => {
+    const entries = historyEntries(historyData());
+    const weeks = groupHistoryByWeek(entries, "Monday");
+    const total = weeks.reduce((sum, week) => sum + week.entries.length, 0);
+    expect(total).toBe(entries.length);
+    expect(
+      weeks.every((week) =>
+        week.entries.every((entry) => entry.date >= week.weekStart && entry.date <= week.weekEnd),
+      ),
+    ).toBe(true);
+  });
+
+  it("groups by the configured week start day", () => {
+    const weeks = groupHistoryByWeek(historyEntries(historyData()), "Sunday");
+    expect(weeks[0]!.weekStart).toBe("2026-03-01");
   });
 });

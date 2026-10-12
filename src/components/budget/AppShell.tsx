@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { format, parseISO } from "date-fns";
-import { navItems } from "./nav";
+import { navItems, tabBarItems } from "./nav";
 import { ThemeToggle } from "./ThemeToggle";
 import { buildShellBanners, type ShellBanner } from "./shellBanners";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -125,7 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="glass fixed inset-x-3 bottom-3 z-20 grid grid-cols-6 rounded-2xl p-1.5 lg:hidden">
-        {navItems.map((n) => (
+        {tabBarItems.map((n) => (
           <Link
             key={n.to}
             to={n.to}

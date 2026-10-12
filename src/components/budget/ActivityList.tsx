@@ -31,7 +31,17 @@ export function ActivityList({
   };
 
   return (
-    <Panel title="This week's activity">
+    <Panel
+      title="This week's activity"
+      action={
+        <a
+          href="/history"
+          className="text-[12px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          All history
+        </a>
+      }
+    >
       <ul className="flex flex-col gap-1">
         {week.activity.map((item) => {
           const label =

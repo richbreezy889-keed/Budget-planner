@@ -71,6 +71,14 @@ describe("App routing", () => {
     expect(doc.body.textContent).toContain("Runway");
   });
 
+  it("renders the history route", async () => {
+    const doc = await renderAt("/history");
+
+    expect(doc.title).toBe("History — MNGS");
+    expect(doc.body.textContent).toContain("Every entry, newest first, grouped by week.");
+    expect(doc.body.textContent).toContain("Week of");
+  });
+
   it("renders the not-found route", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const doc = await renderAt("/this-route-does-not-exist");

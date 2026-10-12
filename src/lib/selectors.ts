@@ -38,6 +38,7 @@ import type {
   ISODate,
   RecurringBill,
   Transaction,
+  WeekStartDay,
 } from "./types";
 
 function parseLocalDate(iso: ISODate): Date {
@@ -384,4 +385,92 @@ export function trendsView(data: AppData, today: ISODate): TrendsView {
     series: weeklySeries(data.incomeEntries, data.transactions, 12, start),
     rollup: monthlyRollup(data.incomeEntries, data.transactions, 4, today),
   };
+}
+
+export interface HistoryEntry {
+  kind: "income" | "spend";
+  id: string;
+  date: ISODate;
+  amount: number;
+  note: string;
+  categoryId?: string;
+}
+
+export interface HistoryWeek {
+  weekStart: ISODate;
+  weekEnd: ISODate;
+  entries: HistoryEntry[];
+}
+
+export type HistoryTypeFilter = "all" | "income" | "spend";
+
+/** Every income and spending entry, newest first, ties keeping their source order. */
+export function historyEntries(data: AppData): HistoryEntry[] {
+  const entries: HistoryEntry[] = [];
+  for (const entry of data.incomeEntries) {
+    entries.push({
+      kind: "income",
+      id: entry.id,
+      date: entry.date,
+      amount: entry.amount,
+      note: entry.note,
+    });
+  }
+  for (const transaction of data.transactions) {
+    entries.push({
+      kind: "spend",
+      id: transaction.id,
+      date: transaction.date,
+      amount: transaction.amount,
+      note: transaction.note,
+      categoryId: transaction.categoryId,
+    });
+  }
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) =>
+      a.entry.date === b.entry.date ? b.index - a.index : a.entry.date < b.entry.date ? 1 : -1,
+    )
+    .map(({ entry }) => entry);
+}
+
+export interface HistoryFilters {
+  type: HistoryTypeFilter;
+  /** "all" or a category id; a real id keeps only spending in that category. */
+  categoryId: string;
+  query: string;
+}
+
+export function filterHistory(entries: HistoryEntry[], filters: HistoryFilters): HistoryEntry[] {
+  const query = filters.query.trim().toLowerCase();
+  return entries.filter((entry) => {
+    if (filters.type === "income" && entry.kind !== "income") return false;
+    if (filters.type === "spend" && entry.kind !== "spend") return false;
+    if (filters.categoryId !== "all") {
+      if (entry.kind !== "spend" || entry.categoryId !== filters.categoryId) return false;
+    }
+    if (query !== "" && !entry.note.toLowerCase().includes(query)) return false;
+    return true;
+  });
+}
+
+/** Groups entries into weeks (newest week first), preserving their incoming order. */
+export function groupHistoryByWeek(
+  entries: HistoryEntry[],
+  weekStartDay: WeekStartDay,
+): HistoryWeek[] {
+  const byWeek = new Map<string, HistoryEntry[]>();
+  for (const entry of entries) {
+    const start = weekStart(entry.date, weekStartDay);
+    const bucket = byWeek.get(start);
+    if (bucket) bucket.push(entry);
+    else byWeek.set(start, [entry]);
+  }
+  return [...byWeek.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([start, items]) => ({
+      weekStart: start,
+      weekEnd: weekEnd(start, weekStartDay),
+      entries: items,
+    }));
 }

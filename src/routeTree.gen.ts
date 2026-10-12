@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BillsRouteImport } from './routes/bills'
 import { Route as BudgetsRouteImport } from './routes/budgets'
 import { Route as BufferRouteImport } from './routes/buffer'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as TrendsRouteImport } from './routes/trends'
@@ -37,6 +38,11 @@ const BufferRoute = BufferRouteImport.update({
   path: '/buffer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/bills': typeof BillsRoute
   '/budgets': typeof BudgetsRoute
   '/buffer': typeof BufferRoute
+  '/history': typeof HistoryRoute
   '/settings': typeof SettingsRoute
   '/start': typeof StartRoute
   '/trends': typeof TrendsRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/bills': typeof BillsRoute
   '/budgets': typeof BudgetsRoute
   '/buffer': typeof BufferRoute
+  '/history': typeof HistoryRoute
   '/settings': typeof SettingsRoute
   '/start': typeof StartRoute
   '/trends': typeof TrendsRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/bills': typeof BillsRoute
   '/budgets': typeof BudgetsRoute
   '/buffer': typeof BufferRoute
+  '/history': typeof HistoryRoute
   '/settings': typeof SettingsRoute
   '/start': typeof StartRoute
   '/trends': typeof TrendsRoute
@@ -84,16 +93,31 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/bills' | '/budgets' | '/buffer' | '/settings' | '/start' | '/trends'
+    | '/'
+    | '/bills'
+    | '/budgets'
+    | '/buffer'
+    | '/history'
+    | '/settings'
+    | '/start'
+    | '/trends'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/bills' | '/budgets' | '/buffer' | '/settings' | '/start' | '/trends'
+    | '/'
+    | '/bills'
+    | '/budgets'
+    | '/buffer'
+    | '/history'
+    | '/settings'
+    | '/start'
+    | '/trends'
   id:
     | '__root__'
     | '/'
     | '/bills'
     | '/budgets'
     | '/buffer'
+    | '/history'
     | '/settings'
     | '/start'
     | '/trends'
@@ -104,6 +128,7 @@ export interface RootRouteChildren {
   BillsRoute: typeof BillsRoute
   BudgetsRoute: typeof BudgetsRoute
   BufferRoute: typeof BufferRoute
+  HistoryRoute: typeof HistoryRoute
   SettingsRoute: typeof SettingsRoute
   StartRoute: typeof StartRoute
   TrendsRoute: typeof TrendsRoute
@@ -139,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BufferRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -168,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillsRoute: BillsRoute,
   BudgetsRoute: BudgetsRoute,
   BufferRoute: BufferRoute,
+  HistoryRoute: HistoryRoute,
   SettingsRoute: SettingsRoute,
   StartRoute: StartRoute,
   TrendsRoute: TrendsRoute,
