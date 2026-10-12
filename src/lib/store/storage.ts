@@ -45,7 +45,7 @@ export const STORAGE_KEY = "mngs:v1";
 export const CORRUPT_PREFIX = "mngs:v1:corrupt:";
 const MAX_CORRUPT_BACKUPS = 3;
 export const BACKUP_PREFIX = "mngs:v1:backup:";
-const MAX_BACKUPS = 5;
+const MAX_BACKUPS = 10;
 
 function isQuotaError(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;

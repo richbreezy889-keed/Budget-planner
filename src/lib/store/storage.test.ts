@@ -312,16 +312,17 @@ describe("createStorageAdapter", () => {
     expect(adapter.listBackups?.()).toEqual([]);
   });
 
-  it("keeps only the newest five snapshots", () => {
+  it("keeps only the newest ten snapshots", () => {
     vi.useFakeTimers();
     const adapter = createStorageAdapter(new FakeStorage());
-    for (let day = 1; day <= 6; day += 1) {
-      vi.setSystemTime(new Date(`2026-01-0${day}T00:00:00.000Z`));
+    for (let day = 1; day <= 11; day += 1) {
+      const stamp = `2026-01-${String(day).padStart(2, "0")}T00:00:00.000Z`;
+      vi.setSystemTime(new Date(stamp));
       adapter.backup?.(customData());
     }
 
     const list = adapter.listBackups?.() ?? [];
-    expect(list).toHaveLength(5);
+    expect(list).toHaveLength(10);
     expect(list.some((entry) => entry.savedAt === "2026-01-01T00:00:00.000Z")).toBe(false);
   });
 
