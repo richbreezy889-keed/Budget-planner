@@ -80,6 +80,7 @@ describe("Empty states for non-demo data", () => {
     expect(screen.getByText("Pay")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Spend" }));
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "c1" } });
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "20" } });
     fireEvent.change(screen.getByLabelText("Note"), { target: { value: "Food" } });
     fireEvent.click(screen.getByRole("button", { name: "Add to week" }));

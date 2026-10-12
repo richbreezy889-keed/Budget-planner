@@ -139,6 +139,33 @@ describe("QuickAddForm", () => {
     expect(screen.getByText("Enter an amount greater than zero.")).toBeInTheDocument();
   });
 
+  it("starts with no category chosen and asks for one when spending", () => {
+    const adapter = realAdapter();
+    render(
+      <AppDataProvider storage={adapter}>
+        <QuickAddForm
+          categories={categories}
+          isDemo={false}
+          weekStartDay="Monday"
+          today="2026-10-19"
+        />
+      </AppDataProvider>,
+    );
+
+    expect(screen.getByRole("option", { name: "Choose a category" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Category")).toHaveValue("");
+
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to week" }));
+
+    expect(screen.getByText("Choose a category.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Category")).toHaveValue("");
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(vi.mocked(adapter.save)).not.toHaveBeenCalled();
+  });
+
   it("edits an existing spending entry through the same form", () => {
     const adapter = realAdapter();
     const onCancel = vi.fn();
@@ -199,6 +226,7 @@ describe("QuickAddForm", () => {
     );
 
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "ghost" } });
     fireEvent.click(screen.getByRole("button", { name: "Add to week" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/Unknown category/);
   });
@@ -236,6 +264,7 @@ describe("QuickAddForm", () => {
 
     fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-15" } });
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "c1" } });
     fireEvent.change(screen.getByLabelText("Note"), { target: { value: "Coffee" } });
     fireEvent.click(screen.getByRole("button", { name: "Add to week" }));
     await act(async () => {

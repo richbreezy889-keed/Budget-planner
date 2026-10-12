@@ -62,6 +62,9 @@ function addEntry(week: HTMLElement, kind: "income" | "spend", amount: string, n
     within(week).getByRole("button", { name: kind === "income" ? "Income" : "Spend" }),
   );
   fireEvent.change(within(week).getByLabelText("Amount"), { target: { value: amount } });
+  if (kind === "spend") {
+    fireEvent.change(within(week).getByLabelText("Category"), { target: { value: "c1" } });
+  }
   fireEvent.change(within(week).getByLabelText("Note"), { target: { value: note } });
   fireEvent.click(within(week).getByRole("button", { name: "Add to week" }));
 }

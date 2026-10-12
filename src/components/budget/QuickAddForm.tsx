@@ -41,16 +41,12 @@ export function QuickAddForm({
   const [date, setDate] = useState(today);
   const [dateTouched, setDateTouched] = useState(false);
   const [note, setNote] = useState("");
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [categoryId, setCategoryId] = useState("");
   const [attempted, setAttempted] = useState(false);
   const [message, setMessage] = useState<Message>(null);
   const [submitting, setSubmitting] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
   const cooldownRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  useEffect(() => {
-    if (categoryId === "" && categories.length > 0) setCategoryId(categories[0]?.id ?? "");
-  }, [categories, categoryId]);
 
   useEffect(() => {
     if (!dateTouched) setDate(today);
@@ -89,7 +85,7 @@ export function QuickAddForm({
     setNote("");
     setDate(today);
     setDateTouched(false);
-    setCategoryId(categories[0]?.id ?? "");
+    setCategoryId("");
   };
 
   const cancelEdit = () => {
@@ -241,7 +237,9 @@ export function QuickAddForm({
                 setMessage(null);
               }}
             >
-              {categories.length === 0 && <option value="">No categories yet</option>}
+              <option value="" disabled>
+                Choose a category
+              </option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {typeLabel[category.type]} · {category.name}
@@ -249,9 +247,7 @@ export function QuickAddForm({
               ))}
             </select>
             {attempted && categoryMissing && (
-              <p className="-mt-1 text-[12px] text-danger">
-                Add a category in Budgets before logging spending.
-              </p>
+              <p className="-mt-1 text-[12px] text-danger">Choose a category.</p>
             )}
           </>
         )}
