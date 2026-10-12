@@ -90,3 +90,30 @@ describe("App routing", () => {
     expect(doc.querySelector("h1")?.textContent).toBe("404");
   });
 });
+
+// The phone layout relies on the shell clipping stray horizontal overflow, reserving
+// room above the fixed tab bar (including the home-indicator inset), and letting wide
+// data tables scroll inside their panel instead of widening the page.
+describe("Phone layout guardrails", () => {
+  it("clips overflow and clears the tab bar on the index route", async () => {
+    const doc = await renderAt("/");
+    const html = doc.body.innerHTML;
+
+    expect(html).toContain("overflow-x-hidden");
+    expect(html).toContain("pb-[calc(7rem+env(safe-area-inset-bottom))]");
+
+    const tabBar = doc.querySelector("nav.fixed");
+    expect(tabBar).not.toBeNull();
+    expect(tabBar?.querySelectorAll("a")).toHaveLength(6);
+    expect(tabBar?.className).toContain("env(safe-area-inset-bottom)");
+    expect(doc.body.textContent).toContain("Where this week's income goes");
+  });
+
+  it("lets the wide bills table scroll inside its panel", async () => {
+    const doc = await renderAt("/bills");
+
+    const table = doc.querySelector("table");
+    expect(table).not.toBeNull();
+    expect(table?.closest('[class*="overflow-x-auto"]')).not.toBeNull();
+  });
+});

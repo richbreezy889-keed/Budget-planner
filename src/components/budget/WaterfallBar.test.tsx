@@ -74,4 +74,9 @@ describe("WaterfallBar", () => {
     expect(short).not.toHaveClass("text-warn");
     expect(short).toHaveClass("text-muted-foreground");
   });
+
+  it("keeps the table inside a horizontally scrollable wrapper", () => {
+    render(<WaterfallBar week={base} currency="USD" />);
+    expect(screen.getByRole("table").parentElement).toHaveClass("overflow-x-auto");
+  });
 });

@@ -51,40 +51,42 @@ export function WaterfallBar({ week, currency }: { week: ThisWeekView; currency:
           </div>
         ))}
       </div>
-      <table className="mt-4 w-full text-[12px]">
-        <thead>
-          <tr className="label-caps text-left">
-            <th className="pb-2 font-normal">Bucket</th>
-            <th className="pb-2 text-right font-normal">Planned</th>
-            <th className="pb-2 text-right font-normal">Funded</th>
-            <th className="pb-2 text-right font-normal">Short</th>
-          </tr>
-        </thead>
-        <tbody>
-          {buckets.map(({ bucket, key }) => {
-            const short = week.waterfall.shortfall[bucket];
-            return (
-              <tr key={key} className="border-t">
-                <td className="py-2">{key}</td>
-                <td className="py-2 text-right font-mono">
-                  {formatMoney(week.plan[bucket], currency)}
-                </td>
-                <td className="py-2 text-right font-mono">
-                  {formatMoney(week.waterfall.allocated[bucket], currency)}
-                </td>
-                <td
-                  className={cn(
-                    "py-2 text-right font-mono",
-                    short > 0 ? "text-warn" : "text-muted-foreground",
-                  )}
-                >
-                  {formatMoney(short, currency)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="-mx-2 mt-4 overflow-x-auto">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="label-caps text-left">
+              <th className="px-2 pb-2 font-normal">Bucket</th>
+              <th className="px-2 pb-2 text-right font-normal">Planned</th>
+              <th className="px-2 pb-2 text-right font-normal">Funded</th>
+              <th className="px-2 pb-2 text-right font-normal">Short</th>
+            </tr>
+          </thead>
+          <tbody>
+            {buckets.map(({ bucket, key }) => {
+              const short = week.waterfall.shortfall[bucket];
+              return (
+                <tr key={key} className="border-t">
+                  <td className="px-2 py-2">{key}</td>
+                  <td className="px-2 py-2 text-right font-mono">
+                    {formatMoney(week.plan[bucket], currency)}
+                  </td>
+                  <td className="px-2 py-2 text-right font-mono">
+                    {formatMoney(week.waterfall.allocated[bucket], currency)}
+                  </td>
+                  <td
+                    className={cn(
+                      "px-2 py-2 text-right font-mono",
+                      short > 0 ? "text-warn" : "text-muted-foreground",
+                    )}
+                  >
+                    {formatMoney(short, currency)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </Panel>
   );
 }

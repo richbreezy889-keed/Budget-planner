@@ -128,7 +128,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <nav className="glass fixed inset-x-3 bottom-3 z-20 grid grid-cols-6 rounded-2xl p-1.5 lg:hidden">
+      <nav className="glass fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-20 grid grid-cols-6 rounded-2xl p-1.5 lg:hidden">
         {tabBarItems.map((n) => (
           <Link
             key={n.to}
