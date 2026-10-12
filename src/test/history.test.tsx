@@ -68,9 +68,17 @@ const wrap = (adapter: StorageAdapter) => (
   </AppDataProvider>
 );
 
+let scrollIntoView = vi.fn();
+
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date(Date.UTC(2026, 9, 22, 8, 0, 0)));
+  vi.setSystemTime(new Date(Date.UTC(2026, 9, 19, 8, 0, 0)));
+  scrollIntoView = vi.fn();
+  Object.defineProperty(Element.prototype, "scrollIntoView", {
+    configurable: true,
+    writable: true,
+    value: scrollIntoView,
+  });
 });
 
 afterEach(() => {
@@ -134,6 +142,37 @@ describe("History screen", () => {
     });
     const saved = vi.mocked(adapter.save).mock.calls.at(-1)?.[0] as AppData;
     expect(saved.transactions.find((row) => row.id === "w5")?.amount).toBe(99);
+  });
+
+  it("focuses the amount field when editing starts", () => {
+    render(wrap(spyAdapter(historyData())));
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Note week 5" }));
+
+    expect(screen.getByLabelText("Amount")).toHaveFocus();
+  });
+
+  it("scrolls back to the edited row after cancelling", () => {
+    render(wrap(spyAdapter(historyData())));
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Note week 5" }));
+    scrollIntoView.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    const row = screen.getByText("Note week 5").closest("li");
+    expect(scrollIntoView.mock.instances).toContain(row);
+  });
+
+  it("scrolls back to the edited row after saving", () => {
+    render(wrap(spyAdapter(historyData())));
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Note week 5" }));
+    scrollIntoView.mockClear();
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "99" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    const row = screen.getByText("Note week 5").closest("li");
+    expect(scrollIntoView.mock.instances).toContain(row);
   });
 
   it("deletes an entry from an older week after confirmation", () => {

@@ -68,6 +68,7 @@ export function QuickAddForm({
     if (editing.kind === "spend") setCategoryId(editing.transaction.categoryId);
     setAttempted(false);
     setMessage(null);
+    amountRef.current?.focus();
   }, [editing]);
 
   useEffect(

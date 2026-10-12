@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { format, parseISO } from "date-fns";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MainSkeleton } from "@/components/budget/AppShell";
 import { DeleteControl } from "@/components/budget/DeleteControl";
@@ -40,6 +40,11 @@ function weekTitle(weekStart: string, weekEnd: string): string {
   return `Week of ${format(parseISO(weekStart), "d MMM")} – ${format(parseISO(weekEnd), "d MMM yyyy")}`;
 }
 
+/** Scrolls an element into view, tolerating environments (like tests) without it. */
+function scrollIntoView(element: Element | null | undefined): void {
+  element?.scrollIntoView?.({ block: "center" });
+}
+
 export function HistoryPage() {
   const { dispatch } = useAppData();
   const view = useAppView();
@@ -48,6 +53,14 @@ export function HistoryPage() {
   const [query, setQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(WEEKS_PER_PAGE);
   const [editing, setEditing] = useState<EditingEntry | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef(new Map<string, HTMLLIElement>());
+  const editingRowId = useRef<string | null>(null);
+
+  // Bring the edit form into view as soon as editing opens.
+  useEffect(() => {
+    if (editing) scrollIntoView(formRef.current);
+  }, [editing]);
 
   const weeks = useMemo(() => {
     if (view === null) return [];
@@ -73,11 +86,25 @@ export function HistoryPage() {
   const startEdit = (entry: HistoryEntry) => {
     if (entry.kind === "income") {
       const found = view.data.incomeEntries.find((row) => row.id === entry.id);
-      if (found) setEditing({ kind: "income", entry: found });
+      if (found) {
+        editingRowId.current = entry.id;
+        setEditing({ kind: "income", entry: found });
+      }
     } else {
       const found = view.data.transactions.find((row) => row.id === entry.id);
-      if (found) setEditing({ kind: "spend", transaction: found });
+      if (found) {
+        editingRowId.current = entry.id;
+        setEditing({ kind: "spend", transaction: found });
+      }
     }
+  };
+
+  // Close the form and return the reader to the row they were editing.
+  const closeEdit = () => {
+    const id = editingRowId.current;
+    editingRowId.current = null;
+    setEditing(null);
+    scrollIntoView(rowRefs.current.get(id ?? ""));
   };
 
   const deleteEntry = (entry: HistoryEntry) => {
@@ -93,14 +120,14 @@ export function HistoryPage() {
       <PageHeader title="History" subtitle="Every entry, newest first, grouped by week." />
 
       {editing && !view.isDemo && (
-        <div className="mb-6">
+        <div ref={formRef} className="mb-6">
           <QuickAddForm
             categories={categories}
             isDemo={view.isDemo}
             weekStartDay={view.data.settings.weekStartDay}
             today={view.today}
             editing={editing}
-            onCancel={() => setEditing(null)}
+            onCancel={closeEdit}
           />
         </div>
       )}
@@ -163,7 +190,14 @@ export function HistoryPage() {
                     : (categories.find((category) => category.id === entry.categoryId)?.name ?? "");
                 const signed = entry.kind === "income" ? entry.amount : -entry.amount;
                 return (
-                  <li key={entry.id} className="rounded-[10px] px-2 py-2 hover:bg-muted">
+                  <li
+                    key={entry.id}
+                    ref={(element) => {
+                      if (element) rowRefs.current.set(entry.id, element);
+                      else rowRefs.current.delete(entry.id);
+                    }}
+                    className="rounded-[10px] px-2 py-2 hover:bg-muted"
+                  >
                     <div className="grid grid-cols-[6rem_minmax(0,1fr)_auto] items-center gap-3 sm:grid-cols-[6rem_minmax(0,1fr)_7rem_auto]">
                       <span className="text-[12px] text-muted-foreground">
                         {format(parseISO(entry.date), "EEE d MMM")}
