@@ -10,6 +10,7 @@ import type {
   Transaction,
 } from "../types";
 import { appReducer, id, type AppReducerResult, type NewCategory } from "./reducer";
+import { bufferBalanceAsOf } from "../calc";
 import { createSeedData } from "./seed";
 
 const okData = (result: AppReducerResult): AppData => {
@@ -532,6 +533,126 @@ describe("record validation", () => {
     const result = appReducer(before, { type: "updateIncome", item: income({ id: "" }) });
     expect(result.ok).toBe(false);
     expect(before.incomeEntries).toHaveLength(2);
+  });
+});
+
+describe("contributeToGoal", () => {
+  it("adds a savings transaction and increases the goal's saved amount", () => {
+    const before = seed();
+    const goalBefore = before.goals.find((row) => row.id === "g1")!;
+    const next = okData(
+      appReducer(before, {
+        type: "contributeToGoal",
+        goalId: "g1",
+        amount: 100,
+        date: "2026-10-05",
+        categoryId: "emergency",
+      }),
+    );
+
+    expect(next.goals.find((row) => row.id === "g1")?.savedAmount).toBe(
+      goalBefore.savedAmount + 100,
+    );
+    const added = next.transactions.at(-1);
+    expect(added).toMatchObject({
+      amount: 100,
+      date: "2026-10-05",
+      categoryId: "emergency",
+      note: "Goal: Lisbon trip",
+    });
+  });
+
+  it("moves the buffer and the goal progress together", () => {
+    const before = seed();
+    const asOf = "2026-11-02";
+    const bufferBefore = bufferBalanceAsOf(
+      before.settings.openingBufferBalance,
+      before.incomeEntries,
+      before.transactions,
+      asOf,
+    );
+    const next = okData(
+      appReducer(before, {
+        type: "contributeToGoal",
+        goalId: "g1",
+        amount: 250,
+        date: "2026-10-05",
+        categoryId: "emergency",
+      }),
+    );
+    const bufferAfter = bufferBalanceAsOf(
+      next.settings.openingBufferBalance,
+      next.incomeEntries,
+      next.transactions,
+      asOf,
+    );
+
+    expect(bufferAfter).toBe(bufferBefore - 250);
+    expect(next.goals.find((row) => row.id === "g1")?.savedAmount).toBe(
+      before.goals.find((row) => row.id === "g1")!.savedAmount + 250,
+    );
+  });
+
+  it("refuses a missing goal without touching the data", () => {
+    const before = seed();
+    const result = appReducer(before, {
+      type: "contributeToGoal",
+      goalId: "nope",
+      amount: 100,
+      date: "2026-10-05",
+      categoryId: "emergency",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("Goal not found");
+    expect(before.transactions).toHaveLength(seed().transactions.length);
+  });
+
+  it("refuses a missing category", () => {
+    const result = appReducer(seed(), {
+      type: "contributeToGoal",
+      goalId: "g1",
+      amount: 100,
+      date: "2026-10-05",
+      categoryId: "nope",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("Category not found");
+  });
+
+  it("refuses a category that is not savings", () => {
+    const result = appReducer(seed(), {
+      type: "contributeToGoal",
+      goalId: "g1",
+      amount: 100,
+      date: "2026-10-05",
+      categoryId: "fun",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("not a savings category");
+  });
+
+  it("refuses a non-positive amount", () => {
+    const result = appReducer(seed(), {
+      type: "contributeToGoal",
+      goalId: "g1",
+      amount: 0,
+      date: "2026-10-05",
+      categoryId: "emergency",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("greater than zero");
+  });
+
+  it("refuses an invalid date", () => {
+    const result = appReducer(seed(), {
+      type: "contributeToGoal",
+      goalId: "g1",
+      amount: 100,
+      date: "2026/10/05",
+      categoryId: "emergency",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("valid date");
   });
 });
 

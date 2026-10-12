@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MainSkeleton } from "@/components/budget/AppShell";
 import { BillForm } from "@/components/budget/BillForm";
 import { DeleteControl } from "@/components/budget/DeleteControl";
+import { GoalContribution } from "@/components/budget/GoalContribution";
 import { GoalForm } from "@/components/budget/GoalForm";
 import { EmptyState, PageHeader, Panel, Progress } from "@/components/budget/Panel";
 import { formatMoney } from "@/lib/format";
@@ -142,50 +143,60 @@ export function BillsPage() {
         />
       ) : (
         <div className="grid gap-6 md:grid-cols-3">
-          {goals.map((goal) => (
-            <Panel key={goal.id}>
-              <div className="font-display text-xl font-semibold">{goal.name}</div>
-              {goal.targetDate && (
-                <div className="mt-1 text-[12px] text-muted-foreground">
-                  by {format(parseISO(goal.targetDate), "MMM yyyy")}
+          {goals.map((goal) => {
+            const rawGoal = view.data.goals.find((row) => row.id === goal.id);
+            return (
+              <Panel key={goal.id}>
+                <div className="font-display text-xl font-semibold">{goal.name}</div>
+                {goal.targetDate && (
+                  <div className="mt-1 text-[12px] text-muted-foreground">
+                    by {format(parseISO(goal.targetDate), "MMM yyyy")}
+                  </div>
+                )}
+                <div className="mt-5 font-mono text-2xl font-bold">
+                  {formatMoney(goal.savedAmount, currency)}{" "}
+                  <span className="text-base font-normal text-muted-foreground">
+                    / {formatMoney(goal.targetAmount, currency)}
+                  </span>
                 </div>
-              )}
-              <div className="mt-5 font-mono text-2xl font-bold">
-                {formatMoney(goal.savedAmount, currency)}{" "}
-                <span className="text-base font-normal text-muted-foreground">
-                  / {formatMoney(goal.targetAmount, currency)}
-                </span>
-              </div>
-              <div className="mt-3">
-                <Progress value={goal.progress} />
-              </div>
-              <div className="mt-3 flex justify-between font-mono text-[12px] text-muted-foreground">
-                <span>{Math.round(goal.progress * 100)}%</span>
-                <span>{formatMoney(goal.weeklyContribution, currency)}/wk</span>
-              </div>
-              <div className="mt-1 flex justify-between font-mono text-[12px] text-muted-foreground">
-                <span>Remaining {formatMoney(goal.remaining, currency)}</span>
-                <span>
-                  {goal.weeksLeft === null ? "No target date" : `${goal.weeksLeft} wks left`}
-                </span>
-              </div>
-              {!view.isDemo && (
-                <div className="mt-4 flex flex-wrap items-center gap-3 text-[12px]">
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label={`Edit ${goal.name}`}
-                    onClick={() =>
-                      setGoalEditing(view.data.goals.find((row) => row.id === goal.id) ?? null)
-                    }
-                  >
-                    Edit
-                  </button>
-                  <DeleteControl name={goal.name} onConfirm={() => removeGoal(goal.id)} />
+                <div className="mt-3">
+                  <Progress value={goal.progress} />
                 </div>
-              )}
-            </Panel>
-          ))}
+                <div className="mt-3 flex justify-between font-mono text-[12px] text-muted-foreground">
+                  <span>{Math.round(goal.progress * 100)}%</span>
+                  <span>{formatMoney(goal.weeklyContribution, currency)}/wk</span>
+                </div>
+                <div className="mt-1 flex justify-between font-mono text-[12px] text-muted-foreground">
+                  <span>Remaining {formatMoney(goal.remaining, currency)}</span>
+                  <span>
+                    {goal.weeksLeft === null ? "No target date" : `${goal.weeksLeft} wks left`}
+                  </span>
+                </div>
+                {!view.isDemo && rawGoal && (
+                  <div className="mt-4">
+                    <GoalContribution
+                      goal={rawGoal}
+                      categories={view.data.categories}
+                      today={view.today}
+                    />
+                  </div>
+                )}
+                {!view.isDemo && (
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-[12px]">
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={`Edit ${goal.name}`}
+                      onClick={() => setGoalEditing(rawGoal ?? null)}
+                    >
+                      Edit
+                    </button>
+                    <DeleteControl name={goal.name} onConfirm={() => removeGoal(goal.id)} />
+                  </div>
+                )}
+              </Panel>
+            );
+          })}
         </div>
       )}
     </div>

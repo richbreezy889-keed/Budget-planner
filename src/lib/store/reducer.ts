@@ -3,6 +3,7 @@ import type {
   Category,
   Goal,
   IncomeEntry,
+  ISODate,
   RecurringBill,
   Settings,
   Transaction,
@@ -13,6 +14,8 @@ import {
   categoryRecordErrors,
   goalRecordErrors,
   incomeRecordErrors,
+  isFiniteNumber,
+  isISODate,
   isNonEmptyString,
   settingsWriteErrors,
   starterCategoryErrors,
@@ -54,6 +57,7 @@ export type AppAction =
   | { type: "addGoal"; item: NewGoal }
   | { type: "updateGoal"; item: Goal }
   | { type: "deleteGoal"; id: string }
+  | { type: "contributeToGoal"; goalId: string; amount: number; date: ISODate; categoryId: string }
   | { type: "setSettings"; settings: Settings }
   | { type: "replaceAll"; data: AppData }
   | { type: "startFresh"; settings: Settings }
@@ -220,6 +224,35 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
     }
     case "deleteGoal":
       return ok({ ...state, goals: removeById(state.goals, action.id) });
+
+    case "contributeToGoal": {
+      const goal = state.goals.find((row) => row.id === action.goalId);
+      if (!goal) return refuse(`Goal not found: "${action.goalId}".`);
+      const category = state.categories.find((row) => row.id === action.categoryId);
+      if (!category) return refuse(`Category not found: "${action.categoryId}".`);
+      if (category.type !== "savings") {
+        return refuse(`"${category.name}" is not a savings category.`);
+      }
+      if (!isFiniteNumber(action.amount) || action.amount <= 0) {
+        return refuse("Enter an amount greater than zero.");
+      }
+      if (!isISODate(action.date)) return refuse("Enter a valid date (YYYY-MM-DD).");
+
+      const contribution: Transaction = {
+        id: id(),
+        date: action.date,
+        amount: action.amount,
+        categoryId: action.categoryId,
+        note: `Goal: ${goal.name}`,
+      };
+      return ok({
+        ...state,
+        transactions: [...state.transactions, contribution],
+        goals: state.goals.map((row) =>
+          row.id === goal.id ? { ...row, savedAmount: row.savedAmount + action.amount } : row,
+        ),
+      });
+    }
 
     case "setSettings": {
       const error = firstError(settingsWriteErrors(action.settings));
