@@ -106,6 +106,30 @@ describe("Settings screen", () => {
     expect(screen.queryByText("Settings saved.")).not.toBeInTheDocument();
     expect(vi.mocked(adapter.save)).not.toHaveBeenCalled();
   });
+
+  it("rejects a currency that is not three letters when saving", () => {
+    const adapter = spyAdapter(realData());
+    render(wrap(adapter));
+
+    fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "TZ" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(screen.getByText("Enter a three-letter currency code.")).toBeInTheDocument();
+    expect(screen.queryByText("Settings saved.")).not.toBeInTheDocument();
+    expect(vi.mocked(adapter.save)).not.toHaveBeenCalled();
+  });
+
+  it("upper-cases a valid currency before saving", () => {
+    const adapter = spyAdapter(realData());
+    render(wrap(adapter));
+
+    const currency = screen.getByLabelText("Currency");
+    fireEvent.change(currency, { target: { value: "tzs" } });
+    expect(currency).toHaveValue("TZS");
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(screen.getByText("Settings saved.")).toBeInTheDocument();
+  });
 });
 
 async function chooseImportFile(file: File) {

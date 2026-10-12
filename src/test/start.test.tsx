@@ -122,6 +122,28 @@ describe("Start fresh wizard", () => {
     expect(scope.getByRole("button", { name: "Next" })).toBeEnabled();
   });
 
+  it("rejects a currency that is not a valid three-letter code", async () => {
+    const { container } = await mountStart();
+    const scope = within(container);
+
+    fillStepOne(container);
+    expect(scope.getByRole("button", { name: "Next" })).toBeEnabled();
+
+    const currency = scope.getByLabelText("Currency");
+    fireEvent.change(currency, { target: { value: "TZ" } });
+    fireEvent.blur(currency);
+    expect(currency).toHaveValue("TZ");
+    expect(scope.getByRole("button", { name: "Next" })).toBeDisabled();
+    expect(scope.getByText("Enter a three-letter currency code.")).toBeTruthy();
+
+    fireEvent.change(currency, { target: { value: "Tsh." } });
+    expect(scope.getByRole("button", { name: "Next" })).toBeDisabled();
+
+    fireEvent.change(currency, { target: { value: "tzs" } });
+    expect(currency).toHaveValue("TZS");
+    expect(scope.getByRole("button", { name: "Next" })).toBeEnabled();
+  });
+
   it("replaces the demo with the chosen categories", async () => {
     const { container } = await mountStart();
     const scope = within(container);
