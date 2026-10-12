@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { act } from "react";
+import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppDataProvider } from "@/lib/store/AppDataProvider";
@@ -51,6 +51,18 @@ function realAdapter(): StorageAdapter {
     save: vi.fn(() => ({ ok: true as const })),
     clear: vi.fn(),
   };
+}
+
+function DateHarness() {
+  const [today, setToday] = useState("2026-10-19");
+  return (
+    <>
+      <button type="button" onClick={() => setToday("2026-10-20")}>
+        Next day
+      </button>
+      <QuickAddForm categories={categories} isDemo={false} weekStartDay="Monday" today={today} />
+    </>
+  );
 }
 
 beforeEach(() => {
@@ -189,5 +201,48 @@ describe("QuickAddForm", () => {
     fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "10" } });
     fireEvent.click(screen.getByRole("button", { name: "Add to week" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/Unknown category/);
+  });
+
+  it("follows today until the date is edited", () => {
+    render(
+      <AppDataProvider storage={realAdapter()}>
+        <DateHarness />
+      </AppDataProvider>,
+    );
+
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-10-19");
+    fireEvent.click(screen.getByRole("button", { name: "Next day" }));
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-10-20");
+  });
+
+  it("keeps the user's date once it has been edited", () => {
+    render(
+      <AppDataProvider storage={realAdapter()}>
+        <DateHarness />
+      </AppDataProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-15" } });
+    fireEvent.click(screen.getByRole("button", { name: "Next day" }));
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-10-15");
+  });
+
+  it("follows today again after a successful add", async () => {
+    render(
+      <AppDataProvider storage={realAdapter()}>
+        <DateHarness />
+      </AppDataProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-15" } });
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "Coffee" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to week" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(700);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Next day" }));
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-10-20");
   });
 });

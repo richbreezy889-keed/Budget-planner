@@ -39,6 +39,7 @@ export function QuickAddForm({
   const [mode, setMode] = useState<Mode>("spend");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(today);
+  const [dateTouched, setDateTouched] = useState(false);
   const [note, setNote] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [attempted, setAttempted] = useState(false);
@@ -52,12 +53,17 @@ export function QuickAddForm({
   }, [categories, categoryId]);
 
   useEffect(() => {
+    if (!dateTouched) setDate(today);
+  }, [today, dateTouched]);
+
+  useEffect(() => {
     if (!editing) return;
     setMode(editing.kind);
     setAmount(
       String(editing.kind === "income" ? editing.entry.amount : editing.transaction.amount),
     );
     setDate(editing.kind === "income" ? editing.entry.date : editing.transaction.date);
+    setDateTouched(true);
     setNote(editing.kind === "income" ? editing.entry.note : editing.transaction.note);
     if (editing.kind === "spend") setCategoryId(editing.transaction.categoryId);
     setAttempted(false);
@@ -81,6 +87,7 @@ export function QuickAddForm({
     setAmount("");
     setNote("");
     setDate(today);
+    setDateTouched(false);
     setCategoryId(categories[0]?.id ?? "");
   };
 
@@ -213,6 +220,7 @@ export function QuickAddForm({
           disabled={isDemo}
           onChange={(event) => {
             setDate(event.target.value);
+            setDateTouched(true);
             setMessage(null);
           }}
         />
