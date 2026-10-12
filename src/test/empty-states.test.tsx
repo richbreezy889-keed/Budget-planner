@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -40,6 +40,11 @@ const wrap = (adapter: StorageAdapter, Page: ComponentType) => (
   </AppDataProvider>
 );
 
+const flush = () =>
+  act(async () => {
+    await vi.advanceTimersByTimeAsync(700);
+  });
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(Date.UTC(2026, 9, 19, 8, 0, 0)));
@@ -51,11 +56,35 @@ afterEach(() => {
 });
 
 describe("Empty states for non-demo data", () => {
-  it("This Week explains how to get a safe-to-spend figure", () => {
+  it("This Week shows the flexible-budget notice but keeps the add form", () => {
     render(wrap(spyAdapter(emptyReal()), ThisWeek));
 
     expect(screen.getByText("Set a flexible budget to see your safe-to-spend")).toBeInTheDocument();
     expect(screen.queryByText("Safe to spend this week")).not.toBeInTheDocument();
+    expect(screen.getByText("Quick add")).toBeInTheDocument();
+    expect(screen.getByText("This week's activity")).toBeInTheDocument();
+  });
+
+  it("still adds income and spending when there is no flexible budget", async () => {
+    const data = emptyReal();
+    data.categories = [
+      { id: "c1", name: "Rent", type: "essential", budgetAmount: 0, budgetPeriod: "monthly" },
+    ];
+    render(wrap(spyAdapter(data), ThisWeek));
+
+    fireEvent.click(screen.getByRole("button", { name: "Income" }));
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "100" } });
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "Pay" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to week" }));
+    await flush();
+    expect(screen.getByText("Pay")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Spend" }));
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "20" } });
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "Food" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to week" }));
+    await flush();
+    expect(screen.getByText("Food")).toBeInTheDocument();
   });
 
   it("Budgets explains there are no categories", () => {

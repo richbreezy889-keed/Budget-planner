@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ActivityList } from "@/components/budget/ActivityList";
 import { MainSkeleton } from "@/components/budget/AppShell";
-import { EmptyState, PageHeader } from "@/components/budget/Panel";
+import { EmptyState } from "@/components/budget/Panel";
 import { QuickAddForm, type EditingEntry } from "@/components/budget/QuickAddForm";
 import { SafeToSpendCard } from "@/components/budget/SafeToSpendCard";
 import { WaterfallBar } from "@/components/budget/WaterfallBar";
@@ -34,6 +34,7 @@ export function ThisWeek() {
   if (view === null) return <MainSkeleton />;
   const week = thisWeekView(view.data, view.today);
   const currency = view.data.settings.currency;
+  const showFlexibleNotice = !view.isDemo && week.flexibleBudget === 0;
 
   const startEdit = (item: WeekActivityItem) => {
     if (item.kind === "income") {
@@ -53,20 +54,16 @@ export function ThisWeek() {
     );
   };
 
-  if (!view.isDemo && week.flexibleBudget === 0) {
-    return (
-      <div>
-        <PageHeader title="This Week" subtitle="Your safe-to-spend number for this week." />
+  return (
+    <div className="flex flex-col gap-6">
+      {showFlexibleNotice ? (
         <EmptyState
           title="Set a flexible budget to see your safe-to-spend"
           hint="Add a flexible category in Budgets, or run Start fresh to include starter categories."
         />
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-6">
-      <SafeToSpendCard week={week} currency={currency} />
+      ) : (
+        <SafeToSpendCard week={week} currency={currency} />
+      )}
       <WeekNotice week={week} currency={currency} />
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <WaterfallBar week={week} currency={currency} />
