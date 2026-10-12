@@ -36,6 +36,12 @@ export interface StorageAdapter {
   readBackup?(id: string): AppData | null;
   /** Removes a single snapshot. Optional. */
   deleteBackup?(id: string): void;
+  /** Unreadable data preserved for recovery, newest first. Optional. */
+  listCorruptBackups?(): BackupMeta[];
+  /** Reads the raw text of an unreadable backup, or null when missing. Optional. */
+  readCorruptRaw?(id: string): string | null;
+  /** Removes a single unreadable backup. Optional. */
+  deleteCorrupt?(id: string): void;
 }
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key" | "length">;
@@ -198,6 +204,39 @@ export function createStorageAdapter(storage: StorageLike | null): StorageAdapte
       if (!storage) return;
       try {
         storage.removeItem(`${BACKUP_PREFIX}${id}`);
+      } catch {
+        // Ignore unavailable storage.
+      }
+    },
+
+    listCorruptBackups(): BackupMeta[] {
+      if (!storage) return [];
+      try {
+        return listKeys(storage)
+          .filter((key) => key.startsWith(CORRUPT_PREFIX))
+          .map((key) => {
+            const id = key.slice(CORRUPT_PREFIX.length);
+            return { id, savedAt: id };
+          })
+          .sort((a, b) => (a.id < b.id ? 1 : -1));
+      } catch {
+        return [];
+      }
+    },
+
+    readCorruptRaw(id: string): string | null {
+      if (!storage) return null;
+      try {
+        return storage.getItem(`${CORRUPT_PREFIX}${id}`);
+      } catch {
+        return null;
+      }
+    },
+
+    deleteCorrupt(id: string): void {
+      if (!storage) return;
+      try {
+        storage.removeItem(`${CORRUPT_PREFIX}${id}`);
       } catch {
         // Ignore unavailable storage.
       }

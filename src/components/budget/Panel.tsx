@@ -5,15 +5,17 @@ export function Panel({
   title,
   action,
   className,
+  id,
   children,
 }: {
   title?: string;
   action?: ReactNode;
   className?: string;
+  id?: string;
   children: ReactNode;
 }) {
   return (
-    <section className={cn("glass rounded-2xl p-5 sm:p-6", className)}>
+    <section id={id} className={cn("glass rounded-2xl p-5 sm:p-6", className)}>
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between gap-3">
           {title && <h2 className="label-caps">{title}</h2>}

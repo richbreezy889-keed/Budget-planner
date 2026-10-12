@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { MainSkeleton } from "@/components/budget/AppShell";
+import { DeleteControl } from "@/components/budget/DeleteControl";
 import { PageHeader, Panel } from "@/components/budget/Panel";
-import { format, parseISO } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { isValidCurrencyCode, normalizeCurrency } from "@/lib/format";
 import { parseMoneyInput } from "@/lib/moneyInput";
 import {
@@ -13,6 +14,7 @@ import {
   type BackupSummary,
 } from "@/lib/store/backup";
 import { useAppData } from "@/lib/store/context";
+import type { BackupMeta } from "@/lib/store/storage";
 import { useAppView } from "@/lib/store/useAppView";
 import { importData } from "@/lib/store/validate";
 import type { AppData, Settings, WeekStartDay } from "@/lib/types";
@@ -47,6 +49,18 @@ type Message = { kind: "success" | "error"; text: string } | null;
 
 /** Object URLs are revoked only after this long so slow downloads still complete. */
 const REVOKE_DELAY_MS = 10000;
+
+/** A readable timestamp for a stored recovery item, falling back to the raw value. */
+function savedLabel(savedAt: string): string {
+  const date = parseISO(savedAt);
+  return isValid(date) ? format(date, "d MMM yyyy, HH:mm") : savedAt;
+}
+
+/** The download name for an unreadable backup, e.g. "mngs-unreadable-2026-01-01.json". */
+function unreadableFileName(savedAt: string): string {
+  const stamp = savedAt.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "data";
+  return `mngs-unreadable-${stamp}.json`;
+}
 
 function readFileText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -89,7 +103,17 @@ export function SettingsPage() {
 }
 
 function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Settings }) {
-  const { data, dispatch, resetData, backups, restoreBackup, deleteBackup } = useAppData();
+  const {
+    data,
+    dispatch,
+    resetData,
+    backups,
+    corruptBackups,
+    restoreBackup,
+    deleteBackup,
+    readCorruptRaw,
+    deleteCorrupt,
+  } = useAppData();
   const [currency, setCurrency] = useState(settings.currency);
   const [weekStartDay, setWeekStartDay] = useState<WeekStartDay>(settings.weekStartDay);
   const [baseline, setBaseline] = useState(String(settings.baselineWeeklyIncome));
@@ -217,6 +241,24 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
         ? { kind: "success", text: "Backup restored." }
         : { kind: "error", text: "Could not restore this backup." },
     );
+  };
+
+  const downloadCorrupt = (entry: BackupMeta) => {
+    const raw = readCorruptRaw(entry.id);
+    if (raw === null) {
+      setRecoveryMessage({ kind: "error", text: "Could not read this data." });
+      return;
+    }
+    if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return;
+    const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = unreadableFileName(entry.savedAt);
+    anchor.rel = "noopener";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
   };
 
   return (
@@ -462,16 +504,16 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
         </Panel>
       )}
 
-      <Panel title="Recovery" className="mt-6">
+      <Panel id="recovery" title="Recovery" className="mt-6">
         <p className="text-[13px] text-muted-foreground">
           A snapshot is saved automatically before a reset. Restore one to bring that data back.
         </p>
-        {backups.length === 0 ? (
+        {backups.length === 0 && corruptBackups.length === 0 ? (
           <p className="mt-3 text-[13px] text-muted-foreground">No backups yet.</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
             {backups.map((backup) => {
-              const label = format(parseISO(backup.savedAt), "d MMM yyyy, HH:mm");
+              const label = savedLabel(backup.savedAt);
               return (
                 <li
                   key={backup.id}
@@ -498,6 +540,35 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
                     >
                       Delete
                     </button>
+                  </span>
+                </li>
+              );
+            })}
+            {corruptBackups.map((entry) => {
+              const label = savedLabel(entry.savedAt);
+              return (
+                <li
+                  key={`corrupt-${entry.id}`}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] bg-muted px-3 py-2 text-[13px]"
+                >
+                  <span>Unreadable data saved {label}</span>
+                  <span className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      className="rounded-[10px] px-3 py-1.5 ring-1 ring-border hover:bg-muted/80"
+                      aria-label={`Download unreadable data from ${label}`}
+                      onClick={() => downloadCorrupt(entry)}
+                    >
+                      Download
+                    </button>
+                    <DeleteControl
+                      name={`unreadable data from ${label}`}
+                      message="Delete this unreadable data?"
+                      onConfirm={() => {
+                        deleteCorrupt(entry.id);
+                        setRecoveryMessage(null);
+                      }}
+                    />
                   </span>
                 </li>
               );

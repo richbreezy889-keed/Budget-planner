@@ -38,7 +38,7 @@ describe("buildShellBanners", () => {
       {
         tone: "warn",
         message: "Your saved data could not be read. A backup was kept.",
-        link: { to: "/settings", label: "Open recovery" },
+        link: { to: "/settings", label: "Open recovery", hash: "recovery" },
       },
     ]);
   });
@@ -82,7 +82,7 @@ describe("buildShellBanners", () => {
       {
         tone: "warn",
         message: "Your saved data could not be read. A backup was kept.",
-        link: { to: "/settings", label: "Open recovery" },
+        link: { to: "/settings", label: "Open recovery", hash: "recovery" },
       },
     ]);
   });

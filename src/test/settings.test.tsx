@@ -17,9 +17,11 @@ import { SettingsPage } from "@/routes/settings";
 function spyAdapter(
   initial: AppData | null = null,
   snapshots: { id: string; data: AppData }[] = [],
+  corrupt: { id: string; raw: string }[] = [],
 ) {
   let stored = initial;
   const backups = new Map<string, AppData>(snapshots.map((entry) => [entry.id, entry.data]));
+  const corruptMap = new Map<string, string>(corrupt.map((entry) => [entry.id, entry.raw]));
   const load = vi.fn((): LoadResult => ({
     data: stored ?? createSeedData(),
     status: stored ? "ok" : "seeded",
@@ -45,6 +47,16 @@ function spyAdapter(
   const deleteBackup = vi.fn((id: string) => {
     backups.delete(id);
   });
+  const listCorruptBackups = vi.fn(() =>
+    Array.from(corruptMap.keys())
+      .sort()
+      .reverse()
+      .map((id) => ({ id, savedAt: id })),
+  );
+  const readCorruptRaw = vi.fn((id: string) => corruptMap.get(id) ?? null);
+  const deleteCorrupt = vi.fn((id: string) => {
+    corruptMap.delete(id);
+  });
   const adapter: StorageAdapter = {
     load,
     save,
@@ -53,6 +65,9 @@ function spyAdapter(
     listBackups,
     readBackup,
     deleteBackup,
+    listCorruptBackups,
+    readCorruptRaw,
+    deleteCorrupt,
   };
   return adapter;
 }
@@ -390,6 +405,58 @@ describe("Settings recovery", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Restore backup from / }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("Could not restore this backup.");
+  });
+
+  it("lists unreadable data even when there are no snapshots", () => {
+    const adapter = spyAdapter(realData(), [], [{ id: "2026-02-03T04:05:06.000Z", raw: "{oops" }]);
+    render(wrap(adapter));
+
+    expect(screen.getByText(/^Unreadable data saved /)).toBeInTheDocument();
+    expect(screen.queryByText("No backups yet.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Restore backup from / })).not.toBeInTheDocument();
+  });
+
+  it("deletes unreadable data after confirmation", () => {
+    const adapter = spyAdapter(realData(), [], [{ id: "2026-02-03T04:05:06.000Z", raw: "{oops" }]);
+    render(wrap(adapter));
+
+    fireEvent.click(screen.getByRole("button", { name: /^Delete unreadable data from / }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+
+    expect(adapter.deleteCorrupt).toHaveBeenCalledWith("2026-02-03T04:05:06.000Z");
+    expect(screen.queryByText(/^Unreadable data saved /)).not.toBeInTheDocument();
+    expect(screen.getByText("No backups yet.")).toBeInTheDocument();
+  });
+
+  it("downloads unreadable data with a dated file name", () => {
+    const adapter = spyAdapter(realData(), [], [{ id: "2026-02-03T04:05:06.000Z", raw: "{oops" }]);
+    render(wrap(adapter));
+
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => "blob:unreadable"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
+    const created: HTMLAnchorElement[] = [];
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation(((
+      tag: string,
+      options?: ElementCreationOptions,
+    ) => {
+      const element = realCreate(tag, options);
+      if (tag === "a") created.push(element as HTMLAnchorElement);
+      return element;
+    }) as typeof document.createElement);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Download unreadable data from / }));
+
+    expect(created[0]?.download).toBe("mngs-unreadable-2026-02-03.json");
+    expect(adapter.readCorruptRaw).toHaveBeenCalledWith("2026-02-03T04:05:06.000Z");
   });
 });
 

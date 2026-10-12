@@ -89,7 +89,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 {banner.message}
                 {banner.link && (
-                  <Link to={banner.link.to} className="ml-2 underline underline-offset-2">
+                  <Link
+                    to={banner.link.to}
+                    {...(banner.link.hash ? { hash: banner.link.hash } : {})}
+                    className="ml-2 underline underline-offset-2"
+                  >
                     {banner.link.label}
                   </Link>
                 )}

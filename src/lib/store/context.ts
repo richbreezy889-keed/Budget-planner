@@ -26,10 +26,16 @@ export interface AppDataContextValue {
   resetData: () => void;
   /** Snapshots available for recovery, newest first. */
   backups: BackupMeta[];
+  /** Unreadable data preserved for recovery, newest first. */
+  corruptBackups: BackupMeta[];
   /** Replaces the current data with a stored backup; false when it is unreadable. */
   restoreBackup: (id: string) => boolean;
   /** Removes a stored backup. */
   deleteBackup: (id: string) => void;
+  /** Reads the raw text of an unreadable backup, or null when missing. */
+  readCorruptRaw: (id: string) => string | null;
+  /** Removes a stored unreadable backup. */
+  deleteCorrupt: (id: string) => void;
 }
 
 export const AppDataContext = createContext<AppDataContextValue | null>(null);

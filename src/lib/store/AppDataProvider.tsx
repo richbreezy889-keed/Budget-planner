@@ -45,6 +45,7 @@ export function AppDataProvider({
   const [hydrated, setHydrated] = useState(false);
   const [storageStatus, setStorageStatus] = useState<StorageStatus>(initialStorageStatus);
   const [backups, setBackups] = useState<BackupMeta[]>([]);
+  const [corruptBackups, setCorruptBackups] = useState<BackupMeta[]>([]);
   const lastPersistedRef = useRef<AppData | null>(null);
   const hydratedRef = useRef(false);
   const latestDataRef = useRef(state.data);
@@ -53,8 +54,9 @@ export function AppDataProvider({
     latestDataRef.current = state.data;
   }, [state.data]);
 
-  const refreshBackups = useCallback(() => {
+  const refreshRecovery = useCallback(() => {
     setBackups(storage.listBackups ? storage.listBackups() : []);
+    setCorruptBackups(storage.listCorruptBackups ? storage.listCorruptBackups() : []);
   }, [storage]);
 
   const persist = useCallback(
@@ -86,9 +88,9 @@ export function AppDataProvider({
     hydratedRef.current = true;
     dispatch({ type: "replaceAll", data: result.data });
     setStorageStatus({ load: result.status, save: "idle", message: null });
-    setBackups(storage.listBackups ? storage.listBackups() : []);
+    refreshRecovery();
     setHydrated(true);
-  }, [storage]);
+  }, [refreshRecovery, storage]);
 
   // Persist changes, debounced, and never before hydration. Unchanged data is skipped.
   useEffect(() => {
@@ -106,8 +108,8 @@ export function AppDataProvider({
     latestDataRef.current = fresh;
     dispatch({ type: "replaceAll", data: fresh });
     persist(fresh);
-    refreshBackups();
-  }, [persist, refreshBackups, storage]);
+    refreshRecovery();
+  }, [persist, refreshRecovery, storage]);
 
   // Replace the current data with a stored backup, then persist it.
   const restoreBackup = useCallback(
@@ -125,9 +127,22 @@ export function AppDataProvider({
   const deleteBackup = useCallback(
     (id: string) => {
       storage.deleteBackup?.(id);
-      refreshBackups();
+      refreshRecovery();
     },
-    [refreshBackups, storage],
+    [refreshRecovery, storage],
+  );
+
+  const readCorruptRaw = useCallback(
+    (id: string): string | null => storage.readCorruptRaw?.(id) ?? null,
+    [storage],
+  );
+
+  const deleteCorrupt = useCallback(
+    (id: string) => {
+      storage.deleteCorrupt?.(id);
+      refreshRecovery();
+    },
+    [refreshRecovery, storage],
   );
 
   // Flush before the page is hidden or unloaded so nothing is lost.
@@ -167,8 +182,11 @@ export function AppDataProvider({
       storageStatus,
       resetData,
       backups,
+      corruptBackups,
       restoreBackup,
       deleteBackup,
+      readCorruptRaw,
+      deleteCorrupt,
     }),
     [
       state.data,
@@ -177,8 +195,11 @@ export function AppDataProvider({
       storageStatus,
       resetData,
       backups,
+      corruptBackups,
       restoreBackup,
       deleteBackup,
+      readCorruptRaw,
+      deleteCorrupt,
     ],
   );
 

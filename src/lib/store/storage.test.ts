@@ -332,4 +332,33 @@ describe("createStorageAdapter", () => {
     expect(adapter.readBackup?.("x")).toBeNull();
     expect(() => adapter.deleteBackup?.("x")).not.toThrow();
   });
+
+  it("lists, reads and deletes unreadable backups newest first", () => {
+    const storage = new FakeStorage();
+    storage.setItem(`${CORRUPT_PREFIX}2026-01-01T00:00:00.000Z`, "{not json");
+    storage.setItem(`${CORRUPT_PREFIX}2026-01-02T00:00:00.000Z`, "also bad");
+    storage.setItem(`${CORRUPT_PREFIX}2026-01-03T00:00:00.000Z`, "newest bad");
+    const adapter = createStorageAdapter(storage);
+
+    expect(adapter.listCorruptBackups?.().map((entry) => entry.id)).toEqual([
+      "2026-01-03T00:00:00.000Z",
+      "2026-01-02T00:00:00.000Z",
+      "2026-01-01T00:00:00.000Z",
+    ]);
+    expect(adapter.readCorruptRaw?.("2026-01-02T00:00:00.000Z")).toBe("also bad");
+    expect(adapter.readCorruptRaw?.("missing")).toBeNull();
+
+    adapter.deleteCorrupt?.("2026-01-02T00:00:00.000Z");
+    expect(adapter.listCorruptBackups?.().map((entry) => entry.id)).toEqual([
+      "2026-01-03T00:00:00.000Z",
+      "2026-01-01T00:00:00.000Z",
+    ]);
+  });
+
+  it("handles unreadable backups without storage", () => {
+    const adapter = createStorageAdapter(null);
+    expect(adapter.listCorruptBackups?.()).toEqual([]);
+    expect(adapter.readCorruptRaw?.("x")).toBeNull();
+    expect(() => adapter.deleteCorrupt?.("x")).not.toThrow();
+  });
 });
