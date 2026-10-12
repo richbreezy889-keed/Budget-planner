@@ -65,7 +65,7 @@ export function ThisWeek() {
         <SafeToSpendCard week={week} currency={currency} />
       )}
       <WeekNotice week={week} currency={currency} />
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
         <WaterfallBar week={week} currency={currency} />
         <QuickAddForm
           categories={view.data.categories}
