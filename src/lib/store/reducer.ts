@@ -84,6 +84,19 @@ function hasCategory(state: AppData, categoryId: string): boolean {
   return state.categories.some((row) => row.id === categoryId);
 }
 
+/**
+ * Refuses a name that collides (trimmed, case-insensitive) with another category.
+ * `excludeId` lets an update keep its own current name.
+ */
+function categoryNameConflict(state: AppData, name: string, excludeId?: string): string | null {
+  const normalized = name.trim().toLowerCase();
+  if (normalized === "") return null;
+  const clash = state.categories.find(
+    (row) => row.id !== excludeId && row.name.trim().toLowerCase() === normalized,
+  );
+  return clash ? `A category named "${clash.name}" already exists.` : null;
+}
+
 /** Validates every category template, naming the first offender in the message. */
 function starterCategoriesError(categories: NewCategory[]): string | null {
   for (let index = 0; index < categories.length; index += 1) {
@@ -151,7 +164,9 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
       return ok({ ...state, transactions: removeById(state.transactions, action.id) });
 
     case "addCategory": {
-      const error = firstError(categoryRecordErrors(action.item));
+      const error =
+        firstError(categoryRecordErrors(action.item)) ??
+        categoryNameConflict(state, action.item.name);
       if (error) return refuse(error);
       return ok({ ...state, categories: addById(state.categories, action.item) });
     }
@@ -159,7 +174,8 @@ export function appReducer(state: AppData, action: AppAction): AppReducerResult 
       const error =
         firstError(categoryRecordErrors(action.item)) ??
         requireId(action.item.id, "category") ??
-        requireExisting(state.categories, action.item.id, "category");
+        requireExisting(state.categories, action.item.id, "category") ??
+        categoryNameConflict(state, action.item.name, action.item.id);
       if (error) return refuse(error);
       return ok({ ...state, categories: updateBy(state.categories, action.item) });
     }

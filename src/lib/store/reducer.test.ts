@@ -158,6 +158,41 @@ describe("category actions", () => {
     expect(next.categories.find((row) => row.id === "fun")?.name).toBe("Fun money");
   });
 
+  it("refuses addCategory with a name that already exists, ignoring case and spacing", () => {
+    const before = seed();
+    const result = appReducer(before, {
+      type: "addCategory",
+      item: category({ id: undefined as never, name: "  gRoCeRiEs " }),
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("Groceries");
+    expect(before.categories).toHaveLength(9);
+  });
+
+  it("refuses updateCategory renamed onto another category", () => {
+    const before = seed();
+    const result = appReducer(before, {
+      type: "updateCategory",
+      item: category({ id: "fun", name: "Groceries" }),
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("Groceries");
+  });
+
+  it("allows updateCategory to keep its own name", () => {
+    const next = okData(
+      appReducer(seed(), { type: "updateCategory", item: category({ id: "fun", name: "fun" }) }),
+    );
+    expect(next.categories.find((row) => row.id === "fun")?.name).toBe("fun");
+  });
+
+  it("allows addCategory once the name is truly new", () => {
+    const next = okData(
+      appReducer(seed(), { type: "addCategory", item: category({ name: "Pets" }) }),
+    );
+    expect(next.categories.some((row) => row.name === "Pets")).toBe(true);
+  });
+
   it("deleteCategory removes a category that is not referenced", () => {
     const next = okData(appReducer(seed(), { type: "deleteCategory", id: "retirement" }));
     expect(next.categories.some((row) => row.id === "retirement")).toBe(false);
