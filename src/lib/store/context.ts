@@ -22,8 +22,11 @@ export interface AppDataContextValue {
   error: string | null;
   /** Load/save health of the backing storage. */
   storageStatus: StorageStatus;
-  /** Wipes all data back to an empty, non-demo state (keeps current settings). */
-  resetData: () => void;
+  /**
+   * Wipes all data back to an empty, non-demo state (keeps current settings).
+   * Refused when the safety snapshot cannot be written.
+   */
+  resetData: () => ResetResult;
   /** Snapshots available for recovery, newest first. */
   backups: BackupMeta[];
   /** Unreadable data preserved for recovery, newest first. */
@@ -44,6 +47,10 @@ export interface AppDataContextValue {
 /** Why a restore was refused: the snapshot is unreadable, or safety could not be saved. */
 export type RestoreFailure = "unreadable" | "not-saved";
 export type RestoreResult = { ok: true } | { ok: false; reason: RestoreFailure };
+
+/** Why a reset was refused: the safety snapshot could not be saved. */
+export type ResetFailure = "not-saved";
+export type ResetResult = { ok: true } | { ok: false; reason: ResetFailure };
 
 export const AppDataContext = createContext<AppDataContextValue | null>(null);
 

@@ -122,6 +122,7 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
   const [resetOpen, setResetOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [resetDone, setResetDone] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const [recoveryMessage, setRecoveryMessage] = useState<Message>(null);
   const [attempted, setAttempted] = useState(false);
@@ -228,8 +229,13 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
 
   const confirmReset = () => {
     if (confirmText.trim() !== "RESET") return;
-    resetData();
+    const result = resetData();
+    if (!result.ok) {
+      setResetError("Could not save a safety snapshot, so nothing was reset.");
+      return;
+    }
     setConfirmText("");
+    setResetError(null);
     setResetOpen(false);
     setResetDone(true);
     setRecoveryMessage(null);
@@ -487,12 +493,18 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
                   onClick={() => {
                     setResetOpen(false);
                     setConfirmText("");
+                    setResetError(null);
                   }}
                   className="rounded-[10px] px-4 py-2 text-sm ring-1 ring-border"
                 >
                   Cancel
                 </button>
               </div>
+              {resetError && (
+                <p className="mt-3 text-[13px] text-danger" role="alert">
+                  {resetError}
+                </p>
+              )}
             </div>
           ) : (
             <button
@@ -500,6 +512,7 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
               onClick={() => {
                 setResetOpen(true);
                 setResetDone(false);
+                setResetError(null);
               }}
               className="mt-4 rounded-[10px] bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-danger/90"
             >

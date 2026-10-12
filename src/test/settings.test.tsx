@@ -346,6 +346,30 @@ describe("Settings reset", () => {
     expect(lastSaved.isDemo).toBe(false);
   });
 
+  it("refuses to reset when the safety snapshot fails", () => {
+    const adapter = spyAdapter(populated());
+    adapter.backup = vi.fn(() => false);
+    render(wrap(adapter));
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset all data" }));
+    fireEvent.change(screen.getByLabelText("Type RESET to confirm"), {
+      target: { value: "RESET" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Reset everything" }));
+
+    expect(
+      screen.getByText("Could not save a safety snapshot, so nothing was reset."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Type RESET to confirm")).toBeInTheDocument();
+    expect(screen.queryByText("All data reset.")).not.toBeInTheDocument();
+    expect(adapter.backup).toHaveBeenCalledTimes(1);
+    expect(adapter.save).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(adapter.save).not.toHaveBeenCalled();
+  });
+
   it("does not reset or back up when cancelled", () => {
     const adapter = spyAdapter(populated());
     render(wrap(adapter));

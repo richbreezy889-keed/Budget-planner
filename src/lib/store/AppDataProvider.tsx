@@ -12,6 +12,7 @@ import type { AppData } from "../types";
 import {
   AppDataContext,
   type AppDataContextValue,
+  type ResetResult,
   type RestoreResult,
   type StorageStatus,
 } from "./context";
@@ -106,14 +107,18 @@ export function AppDataProvider({
   }, [state.data, hydrated, persist, debounceMs]);
 
   // Clear every record, snapshotting the current data first so it can be recovered.
-  const resetData = useCallback(() => {
+  // Refuses, changing nothing, when that snapshot cannot be written.
+  const resetData = useCallback((): ResetResult => {
     const current = latestDataRef.current;
-    storage.backup?.(current);
+    if (storage.backup?.(current) !== true) {
+      return { ok: false, reason: "not-saved" };
+    }
     const fresh = startFresh(current.settings);
     latestDataRef.current = fresh;
     dispatch({ type: "replaceAll", data: fresh });
     persist(fresh);
     refreshRecovery();
+    return { ok: true };
   }, [persist, refreshRecovery, storage]);
 
   // Replace the current data with a stored backup, snapshotting the current data
