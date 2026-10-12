@@ -12,7 +12,7 @@ import type { AppData } from "../types";
 import { AppDataContext, type AppDataContextValue, type StorageStatus } from "./context";
 import { appReducer, type AppAction } from "./reducer";
 import { createSeedData, startFresh } from "./seed";
-import { STORAGE_KEY, localStorageAdapter, type StorageAdapter } from "./storage";
+import { STORAGE_KEY, localStorageAdapter, type BackupMeta, type StorageAdapter } from "./storage";
 import { importData } from "./validate";
 
 interface ProviderState {
@@ -44,6 +44,7 @@ export function AppDataProvider({
   const [state, dispatch] = useReducer(rootReducer, undefined, createInitialState);
   const [hydrated, setHydrated] = useState(false);
   const [storageStatus, setStorageStatus] = useState<StorageStatus>(initialStorageStatus);
+  const [backups, setBackups] = useState<BackupMeta[]>([]);
   const lastPersistedRef = useRef<AppData | null>(null);
   const hydratedRef = useRef(false);
   const latestDataRef = useRef(state.data);
@@ -51,6 +52,10 @@ export function AppDataProvider({
   useEffect(() => {
     latestDataRef.current = state.data;
   }, [state.data]);
+
+  const refreshBackups = useCallback(() => {
+    setBackups(storage.listBackups ? storage.listBackups() : []);
+  }, [storage]);
 
   const persist = useCallback(
     (data: AppData) => {
@@ -81,6 +86,7 @@ export function AppDataProvider({
     hydratedRef.current = true;
     dispatch({ type: "replaceAll", data: result.data });
     setStorageStatus({ load: result.status, save: "idle", message: null });
+    setBackups(storage.listBackups ? storage.listBackups() : []);
     setHydrated(true);
   }, [storage]);
 
@@ -100,7 +106,29 @@ export function AppDataProvider({
     latestDataRef.current = fresh;
     dispatch({ type: "replaceAll", data: fresh });
     persist(fresh);
-  }, [persist, storage]);
+    refreshBackups();
+  }, [persist, refreshBackups, storage]);
+
+  // Replace the current data with a stored backup, then persist it.
+  const restoreBackup = useCallback(
+    (id: string): boolean => {
+      const restored = storage.readBackup?.(id) ?? null;
+      if (!restored) return false;
+      latestDataRef.current = restored;
+      dispatch({ type: "replaceAll", data: restored });
+      persist(restored);
+      return true;
+    },
+    [persist, storage],
+  );
+
+  const deleteBackup = useCallback(
+    (id: string) => {
+      storage.deleteBackup?.(id);
+      refreshBackups();
+    },
+    [refreshBackups, storage],
+  );
 
   // Flush before the page is hidden or unloaded so nothing is lost.
   useEffect(() => {
@@ -131,8 +159,27 @@ export function AppDataProvider({
   }, []);
 
   const value = useMemo<AppDataContextValue>(
-    () => ({ data: state.data, dispatch, hydrated, error: state.error, storageStatus, resetData }),
-    [state.data, state.error, hydrated, storageStatus, resetData],
+    () => ({
+      data: state.data,
+      dispatch,
+      hydrated,
+      error: state.error,
+      storageStatus,
+      resetData,
+      backups,
+      restoreBackup,
+      deleteBackup,
+    }),
+    [
+      state.data,
+      state.error,
+      hydrated,
+      storageStatus,
+      resetData,
+      backups,
+      restoreBackup,
+      deleteBackup,
+    ],
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

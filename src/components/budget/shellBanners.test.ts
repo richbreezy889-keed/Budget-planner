@@ -33,9 +33,13 @@ describe("buildShellBanners", () => {
     ]);
   });
 
-  it("flags a recovered load", () => {
+  it("flags a recovered load with a recovery link", () => {
     expect(buildShellBanners(view(false), status({ load: "recovered" }))).toEqual([
-      { tone: "warn", message: "Your saved data could not be read. A backup was kept." },
+      {
+        tone: "warn",
+        message: "Your saved data could not be read. A backup was kept.",
+        link: { to: "/settings", label: "Open recovery" },
+      },
     ]);
   });
 
@@ -75,7 +79,11 @@ describe("buildShellBanners", () => {
         message: "You are viewing demo data (read-only).",
         link: { to: "/start", label: "Start fresh" },
       },
-      { tone: "warn", message: "Your saved data could not be read. A backup was kept." },
+      {
+        tone: "warn",
+        message: "Your saved data could not be read. A backup was kept.",
+        link: { to: "/settings", label: "Open recovery" },
+      },
     ]);
   });
 });

@@ -10,6 +10,18 @@ export interface LoadResult {
   status: LoadStatus;
 }
 
+export interface LoadResult {
+  data: AppData;
+  status: LoadStatus;
+}
+
+export interface BackupMeta {
+  /** Identifies the backup; also the timestamp used in its storage key. */
+  id: string;
+  /** ISO timestamp of when the backup was taken. */
+  savedAt: string;
+}
+
 export interface StorageAdapter {
   /** Returns validated data plus how it was obtained (or the seed as a fallback). */
   load(): LoadResult;
@@ -18,6 +30,12 @@ export interface StorageAdapter {
   clear(): void;
   /** Best-effort snapshot of the current data, kept for recovery. Optional. */
   backup?(data: AppData): boolean;
+  /** Snapshots available for recovery, newest first. Optional. */
+  listBackups?(): BackupMeta[];
+  /** Reads a snapshot by id, or null when missing or unreadable. Optional. */
+  readBackup?(id: string): AppData | null;
+  /** Removes a single snapshot. Optional. */
+  deleteBackup?(id: string): void;
 }
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key" | "length">;
@@ -146,6 +164,42 @@ export function createStorageAdapter(storage: StorageLike | null): StorageAdapte
         return true;
       } catch {
         return false;
+      }
+    },
+
+    listBackups(): BackupMeta[] {
+      if (!storage) return [];
+      try {
+        return listKeys(storage)
+          .filter((key) => key.startsWith(BACKUP_PREFIX))
+          .map((key) => {
+            const id = key.slice(BACKUP_PREFIX.length);
+            return { id, savedAt: id };
+          })
+          .sort((a, b) => (a.id < b.id ? 1 : -1));
+      } catch {
+        return [];
+      }
+    },
+
+    readBackup(id: string): AppData | null {
+      if (!storage) return null;
+      try {
+        const raw = storage.getItem(`${BACKUP_PREFIX}${id}`);
+        if (raw === null) return null;
+        const result = importData(raw);
+        return result.ok ? result.data : null;
+      } catch {
+        return null;
+      }
+    },
+
+    deleteBackup(id: string): void {
+      if (!storage) return;
+      try {
+        storage.removeItem(`${BACKUP_PREFIX}${id}`);
+      } catch {
+        // Ignore unavailable storage.
       }
     },
   };

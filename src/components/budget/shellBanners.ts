@@ -4,7 +4,7 @@ import type { AppView } from "@/lib/store/useAppView";
 export interface ShellBanner {
   tone: "info" | "warn" | "danger";
   message: string;
-  link?: { to: "/start"; label: string };
+  link?: { to: "/start" | "/settings"; label: string };
 }
 
 const saveErrorMessages: Record<string, string> = {
@@ -28,6 +28,7 @@ export function buildShellBanners(view: AppView | null, status: StorageStatus): 
     banners.push({
       tone: "warn",
       message: "Your saved data could not be read. A backup was kept.",
+      link: { to: "/settings", label: "Open recovery" },
     });
   }
   if (status.save === "error" && status.message !== null) {

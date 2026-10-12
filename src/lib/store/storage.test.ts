@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AppData } from "../types";
 import { createSeedData } from "./seed";
-import { CORRUPT_PREFIX, STORAGE_KEY, createStorageAdapter, type StorageLike } from "./storage";
+import {
+  BACKUP_PREFIX,
+  CORRUPT_PREFIX,
+  STORAGE_KEY,
+  createStorageAdapter,
+  type StorageLike,
+} from "./storage";
 import { exportData } from "./validate";
 
 class FakeStorage implements StorageLike {
@@ -259,5 +265,71 @@ describe("createStorageAdapter", () => {
     expect(adapter.load().status).toBe("unavailable");
     expect(adapter.save(customData())).toEqual({ ok: false, reason: "unavailable" });
     expect(() => adapter.clear()).not.toThrow();
+  });
+
+  it("writes a snapshot and lists snapshots newest first", () => {
+    vi.useFakeTimers();
+    const storage = new FakeStorage();
+    const adapter = createStorageAdapter(storage);
+
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    expect(adapter.backup?.(customData())).toBe(true);
+    vi.setSystemTime(new Date("2026-01-02T00:00:00.000Z"));
+    adapter.backup?.(customData());
+
+    expect(adapter.listBackups?.().map((entry) => entry.savedAt)).toEqual([
+      "2026-01-02T00:00:00.000Z",
+      "2026-01-01T00:00:00.000Z",
+    ]);
+    expect(storage.raw(`${BACKUP_PREFIX}2026-01-01T00:00:00.000Z`)).toBe(exportData(customData()));
+  });
+
+  it("reads a snapshot back and reports a missing one", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    const adapter = createStorageAdapter(new FakeStorage());
+    adapter.backup?.(customData());
+
+    expect(adapter.readBackup?.("2026-01-01T00:00:00.000Z")).toEqual(customData());
+    expect(adapter.readBackup?.("nope")).toBeNull();
+  });
+
+  it("returns null for an unreadable snapshot", () => {
+    const storage = new FakeStorage();
+    storage.setItem(`${BACKUP_PREFIX}bad`, "{not json");
+    const adapter = createStorageAdapter(storage);
+
+    expect(adapter.readBackup?.("bad")).toBeNull();
+  });
+
+  it("deletes a snapshot", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    const adapter = createStorageAdapter(new FakeStorage());
+    adapter.backup?.(customData());
+
+    adapter.deleteBackup?.("2026-01-01T00:00:00.000Z");
+    expect(adapter.listBackups?.()).toEqual([]);
+  });
+
+  it("keeps only the newest five snapshots", () => {
+    vi.useFakeTimers();
+    const adapter = createStorageAdapter(new FakeStorage());
+    for (let day = 1; day <= 6; day += 1) {
+      vi.setSystemTime(new Date(`2026-01-0${day}T00:00:00.000Z`));
+      adapter.backup?.(customData());
+    }
+
+    const list = adapter.listBackups?.() ?? [];
+    expect(list).toHaveLength(5);
+    expect(list.some((entry) => entry.savedAt === "2026-01-01T00:00:00.000Z")).toBe(false);
+  });
+
+  it("handles snapshots without storage", () => {
+    const adapter = createStorageAdapter(null);
+    expect(adapter.backup?.(customData())).toBe(false);
+    expect(adapter.listBackups?.()).toEqual([]);
+    expect(adapter.readBackup?.("x")).toBeNull();
+    expect(() => adapter.deleteBackup?.("x")).not.toThrow();
   });
 });

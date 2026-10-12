@@ -2,7 +2,7 @@ import { createContext, useContext, type Dispatch } from "react";
 
 import type { AppData } from "../types";
 import type { AppAction } from "./reducer";
-import type { LoadStatus } from "./storage";
+import type { BackupMeta, LoadStatus } from "./storage";
 
 export interface StorageStatus {
   /** How the initial data was obtained. */
@@ -24,6 +24,12 @@ export interface AppDataContextValue {
   storageStatus: StorageStatus;
   /** Wipes all data back to an empty, non-demo state (keeps current settings). */
   resetData: () => void;
+  /** Snapshots available for recovery, newest first. */
+  backups: BackupMeta[];
+  /** Replaces the current data with a stored backup; false when it is unreadable. */
+  restoreBackup: (id: string) => boolean;
+  /** Removes a stored backup. */
+  deleteBackup: (id: string) => void;
 }
 
 export const AppDataContext = createContext<AppDataContextValue | null>(null);

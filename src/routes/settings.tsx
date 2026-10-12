@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { MainSkeleton } from "@/components/budget/AppShell";
 import { PageHeader, Panel } from "@/components/budget/Panel";
+import { format, parseISO } from "date-fns";
 import { isValidCurrencyCode, normalizeCurrency } from "@/lib/format";
 import { parseMoneyInput } from "@/lib/moneyInput";
 import {
@@ -88,7 +89,7 @@ export function SettingsPage() {
 }
 
 function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Settings }) {
-  const { data, dispatch, resetData } = useAppData();
+  const { data, dispatch, resetData, backups, restoreBackup, deleteBackup } = useAppData();
   const [currency, setCurrency] = useState(settings.currency);
   const [weekStartDay, setWeekStartDay] = useState<WeekStartDay>(settings.weekStartDay);
   const [baseline, setBaseline] = useState(String(settings.baselineWeeklyIncome));
@@ -97,6 +98,7 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
   const [resetOpen, setResetOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [resetDone, setResetDone] = useState(false);
+  const [recoveryMessage, setRecoveryMessage] = useState<Message>(null);
   const [attempted, setAttempted] = useState(false);
   const [importState, setImportState] = useState<ImportState>({ kind: "idle" });
   const [lastExportName, setLastExportName] = useState<string | null>(null);
@@ -195,6 +197,16 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
     setConfirmText("");
     setResetOpen(false);
     setResetDone(true);
+    setRecoveryMessage(null);
+  };
+
+  const restore = (id: string) => {
+    const ok = restoreBackup(id);
+    setRecoveryMessage(
+      ok
+        ? { kind: "success", text: "Backup restored." }
+        : { kind: "error", text: "Could not restore this backup." },
+    );
   };
 
   return (
@@ -439,6 +451,58 @@ function SettingsContent({ isDemo, settings }: { isDemo: boolean; settings: Sett
           )}
         </Panel>
       )}
+
+      <Panel title="Recovery" className="mt-6">
+        <p className="text-[13px] text-muted-foreground">
+          A snapshot is saved automatically before a reset. Restore one to bring that data back.
+        </p>
+        {backups.length === 0 ? (
+          <p className="mt-3 text-[13px] text-muted-foreground">No backups yet.</p>
+        ) : (
+          <ul className="mt-3 flex flex-col gap-2">
+            {backups.map((backup) => {
+              const label = format(parseISO(backup.savedAt), "d MMM yyyy, HH:mm");
+              return (
+                <li
+                  key={backup.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] bg-muted px-3 py-2 text-[13px]"
+                >
+                  <span>Saved {label}</span>
+                  <span className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      className="rounded-[10px] px-3 py-1.5 ring-1 ring-border hover:bg-muted/80"
+                      aria-label={`Restore backup from ${label}`}
+                      onClick={() => restore(backup.id)}
+                    >
+                      Restore
+                    </button>
+                    <button
+                      type="button"
+                      className="text-danger hover:underline"
+                      aria-label={`Delete backup from ${label}`}
+                      onClick={() => {
+                        deleteBackup(backup.id);
+                        setRecoveryMessage(null);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {recoveryMessage && (
+          <p
+            className={`mt-3 text-[13px] ${recoveryMessage.kind === "error" ? "text-danger" : "text-safe"}`}
+            role={recoveryMessage.kind === "error" ? "alert" : "status"}
+          >
+            {recoveryMessage.text}
+          </p>
+        )}
+      </Panel>
     </div>
   );
 }

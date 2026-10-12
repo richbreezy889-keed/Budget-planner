@@ -9,8 +9,12 @@ import type { LoadResult, SaveResult, StorageAdapter } from "@/lib/store/storage
 import type { AppData } from "@/lib/types";
 import { SettingsPage } from "@/routes/settings";
 
-function spyAdapter(initial: AppData | null = null) {
+function spyAdapter(
+  initial: AppData | null = null,
+  snapshots: { id: string; data: AppData }[] = [],
+) {
   let stored = initial;
+  const backups = new Map<string, AppData>(snapshots.map((entry) => [entry.id, entry.data]));
   const load = vi.fn((): LoadResult => ({
     data: stored ?? createSeedData(),
     status: stored ? "ok" : "seeded",
@@ -22,8 +26,29 @@ function spyAdapter(initial: AppData | null = null) {
   const clear = vi.fn(() => {
     stored = null;
   });
-  const backup = vi.fn(() => true);
-  const adapter: StorageAdapter = { load, save, clear, backup };
+  const backup = vi.fn((data: AppData) => {
+    backups.set("2026-01-01", data);
+    return true;
+  });
+  const listBackups = vi.fn(() =>
+    Array.from(backups.keys())
+      .sort()
+      .reverse()
+      .map((id) => ({ id, savedAt: id })),
+  );
+  const readBackup = vi.fn((id: string) => backups.get(id) ?? null);
+  const deleteBackup = vi.fn((id: string) => {
+    backups.delete(id);
+  });
+  const adapter: StorageAdapter = {
+    load,
+    save,
+    clear,
+    backup,
+    listBackups,
+    readBackup,
+    deleteBackup,
+  };
   return adapter;
 }
 
@@ -315,5 +340,50 @@ describe("Settings reset", () => {
     render(wrap(spyAdapter()));
 
     expect(screen.queryByRole("button", { name: "Reset all data" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Settings recovery", () => {
+  const snapshot = (): AppData => {
+    const data = realData();
+    data.categories = [
+      { id: "c9", name: "Saved", type: "flexible", budgetAmount: 10, budgetPeriod: "weekly" },
+    ];
+    return data;
+  };
+
+  it("lists a snapshot and restores it", () => {
+    const adapter = spyAdapter(realData(), [{ id: "2026-01-01", data: snapshot() }]);
+    render(wrap(adapter));
+
+    expect(screen.getByText(/^Saved /)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Restore backup from / }));
+
+    expect(screen.getByText("Backup restored.")).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    const lastSaved = vi.mocked(adapter.save).mock.calls.at(-1)?.[0] as AppData;
+    expect(lastSaved.categories).toEqual(snapshot().categories);
+  });
+
+  it("deletes a snapshot", () => {
+    const adapter = spyAdapter(realData(), [{ id: "2026-01-01", data: snapshot() }]);
+    render(wrap(adapter));
+
+    fireEvent.click(screen.getByRole("button", { name: /^Delete backup from / }));
+
+    expect(adapter.deleteBackup).toHaveBeenCalledWith("2026-01-01");
+    expect(screen.getByText("No backups yet.")).toBeInTheDocument();
+  });
+
+  it("reports a backup that cannot be read", () => {
+    const adapter = spyAdapter(realData(), [{ id: "2026-01-01", data: snapshot() }]);
+    adapter.readBackup = vi.fn(() => null);
+    render(wrap(adapter));
+
+    fireEvent.click(screen.getByRole("button", { name: /^Restore backup from / }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Could not restore this backup.");
   });
 });
